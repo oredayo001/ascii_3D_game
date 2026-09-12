@@ -136,6 +136,7 @@ static void gameRender(){
 
 	// --- スクリーンのクリーン --- /
 	clearScreen(m.rCtx->sc);
+
 	// --- モデルをスタックに入れる --- /
 
 	//インスタンス描画/

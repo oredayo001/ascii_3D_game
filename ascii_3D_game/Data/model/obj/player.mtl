@@ -1,4 +1,4 @@
-# Blender 5.1.2 MTL File: 'mario.blend'
+# Blender 5.1.2 MTL File: 'player.blend'
 # www.blender.org
 
 newmtl 00_mtl_player
@@ -9,4 +9,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.500000
 d 1.000000
 illum 2
-map_Kd C:/_______myWorkMain/3d/blender/mario64/obj/mario/tx/player_texture.bmp
+map_Kd C:/_______myWorkMain/3d/blender/ascii_3D_game/obj/player/tx/player_texture.bmp

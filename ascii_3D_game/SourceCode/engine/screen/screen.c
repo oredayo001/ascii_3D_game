@@ -173,6 +173,7 @@ void updateScreen(Screen* sc){
 	//そんで戻った時にprev都の変更点を見ながらbuffに書き込むって仕組み/
 
 }
+//テスト用/
 void _updateScreen(Screen* sc){
 	//先頭/
 	char* p = sc->buff;
