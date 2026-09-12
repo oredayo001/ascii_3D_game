@@ -1,0 +1,88 @@
+#pragma once
+
+#include"common.h"
+#include"objDef.h"
+
+
+// --- 管理者が呼ぶ --- /
+
+//初期化/
+void initInstances();
+//更新/
+void updateInstances();
+//描画/
+void renderInstances();
+//終わり ゲーム終了時とかに/
+void finInstances();
+
+// --- ゲームロジック側が呼ぶ --- /
+
+//インスタンスを全消去するだけ/
+//一区切りついたときに呼ぶ/
+void destroyInstances();
+
+
+// --- 誰でも呼べる --- /
+
+//作成 objID:id_obj.../
+objBase* instanceCreate(uint16_t objID, vec3 p);
+
+static inline void instanceDestroy(objBase* inst){
+	inst->isActive = 0;
+}
+
+// --- objのポインタを安全に持つ仕組み --- /
+
+//キャラのポインタを入れるためのもの/
+typedef union{
+	void* _____align_ptr___DONT_USE_____[2];
+} InstPtr;//偽物の型/
+
+//本物の型/
+#define REAL_INST_PTR_STRUCT \
+struct { \
+    objBase* ptr; \
+    uint32_t generation; \
+}
+
+#define DEF_REAL_INST_PTR(T) typedef REAL_INST_PTR_STRUCT T
+
+//キャラのポインタを2f以上保持しておきたいときに使うやつ/
+static inline InstPtr makeInstPtr(objBase* target){
+	DEF_REAL_INST_PTR(real_instPtr);
+
+	//サイズが違うかったらはじく 関数の中でやってるのはローカルの型だから/
+	static_assert(sizeof(InstPtr) == sizeof(real_instPtr), "objRefとrealObjRefとのサイズが合わない");
+
+	InstPtr r = { 0 };
+	real_instPtr* real = (real_instPtr*)&r;
+	if(target != NULL){//何かしらはさしてる/
+		real->ptr = target;
+		real->generation = target->generation;
+	}
+	return r;
+}
+
+//生きてるか死んでるか/
+static inline int isAliveInstPtr(const InstPtr* _ref){
+	DEF_REAL_INST_PTR(real_instPtr);
+
+	const real_instPtr* ref = (const real_instPtr*)_ref;
+	if(ref->ptr == NULL) return 0;
+	return ref->ptr->generation == ref->generation;
+}
+
+//死んでたらNULLが返る/
+static inline objBase* getInstPtr(const InstPtr* _ref){
+	DEF_REAL_INST_PTR(real_instPtr);
+
+	if(isAliveInstPtr(_ref)){
+		const real_instPtr* ref = (const real_instPtr*)_ref;
+		return ref->ptr;
+	}
+	//死んでたらnull
+	return NULL;
+}
+//ほかで使われたら困るから消す/
+#undef DEF_REAL_INST_PTR
+#undef REAL_INST_PTR_STRUCT
