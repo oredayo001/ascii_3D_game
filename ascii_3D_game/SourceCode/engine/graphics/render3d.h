@@ -16,6 +16,7 @@ typedef struct{
 		vec3 norm;
 	} *tri;//‚¿‚á‚ñ‚ÆŠÇ—‚³‚ê‚Ä‚é/
 	vec2* uv;
+	mdlTextureRLE* texInfo;
 } StaticRenderStack;
 
 

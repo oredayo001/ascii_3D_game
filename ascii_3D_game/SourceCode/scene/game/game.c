@@ -3,6 +3,7 @@
 #include "engine/screen/screen.h"
 #include "engine/graphics/render3d.h"
 #include "engine/buffer/gameBuff.h"
+#include "engine/graphics/loader/textureLoader.h"
 
 //scene
 #include "scene/title/title.h"
@@ -87,11 +88,18 @@ static void gameInit(ISystemContext* context){
 	*/
 
 	// --- ここで層がstageになる --- /
+
+	//メモリの準備/
 	gm_d_pushStack();
 	m.stage_memolyMarker = gm_getMarker();
-	player = (objPlayer*)instanceCreate(obj_player, (vec3){ 0, 5000.f, 0 });
-	gameCameraControlerInitializer(m.cameraControler, player);
 
+	//プレイヤー/
+	player = (objPlayer*)instanceCreate(obj_player, (vec3){ 0, 5000.f, 0 });
+	//カメラ/
+	gameCameraControlerInitializer(m.cameraControler, player);
+	//テクスチャ/
+	initTextureLoader(getMaxTextureID() + 1);
+	//モデル/
 	int mdlIndexes = objModel_player;
 	loadObjModels(&mdlIndexes, 1);
 	m.rCtx->c->b = basisZ;

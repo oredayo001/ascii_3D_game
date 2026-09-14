@@ -1,6 +1,9 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "modelLoader.h"
 
 #include "engine/buffer/gameBuff.h"
+#include "textureLoader.h"
+#include "engine/fileio/fileio.h"
 
 #include "common.h"
 
@@ -37,6 +40,43 @@ static void modelListDestroy(ModelLoadList** l, int needFree){
 	*l = NULL;
 }
 
+static int _loadMtlFile_texture(FILE* mtlFile, const char* mtlName, const char* basePath){
+	//戻る/
+	rewind(mtlFile);
+
+	//読み取る/
+	char line[256];
+	while(fgets(line, sizeof(line), mtlFile)){
+		if(!memcmp(line, "newmtl", sizeof("newmtl") - 1)){
+			char mtlName_l[256] = { 0 };
+			sscanf_s(line, "newmtl %s", mtlName_l, (uint32_t)sizeof(mtlName_l));
+
+			int check = 0;
+			int len1 = strlen(mtlName);
+			int len2 = strlen(mtlName_l);
+			if(len1 != len2)continue;
+			if(!memcmp(mtlName_l, mtlName, len1))goto findMTL;//一致/
+		}
+	}
+	ASSERT(0, "マテリアルが見つからんかった");
+	return -1;
+findMTL:
+	while(fgets(line, sizeof(line), mtlFile)){
+		if(!memcmp(line, "map_Kd", sizeof("map_Kd") - 1)){
+			char filePath_rel[256];
+			char filePath[256];
+			sscanf_s(line, "map_Kd %s", filePath_rel, (uint32_t)sizeof(filePath_rel));
+			attachFilePath(basePath, filePath_rel, filePath);
+			return loadTexture(filePath);
+		}
+		if(!memcmp(line, "newmtl", sizeof("newmtl") - 1))break;//次のマテリアルを読んでる/
+	}
+	ASSERT(0, "テクスチャが見つからんかった");//今んとこはないとおかしい/
+	return -1;
+}
+
+#define MAX_TEX_SWITCH 32
+
 //まあなんかバイナリファイルとかに変更したらここを差し替えればいいはず　でまあobjからバイナリコードに変換するやつがいるかもな/
 static int _loadAllModel(int isTemp){
 	void* (*allocator)() = isTemp ? gm_allocate_back : gm_allocate;
@@ -46,14 +86,22 @@ static int _loadAllModel(int isTemp){
 	//サイズ/
 	size_t vSize = sizeof(vec3) * MAX_V_CNT;
 	size_t iSize = sizeof(int) * MAX_V_CNT;
-	size_t total = vSize + iSize;
+	size_t uv_iSize = sizeof(int) * MAX_V_CNT;
+	size_t uvSize = sizeof(vec2) * MAX_V_CNT;
+
+	size_t total = vSize + iSize + uv_iSize + uvSize;
 	//一時メモリ確保/
 	int gmMarker = gm_getMarker_back();
 	uint8_t* tempMemory = (uint8_t*)gm_allocate_back(total);//1byte型/
 
 	//全員4の倍数だからアライメントは気にしなくていい/
 	vec3* vertices = (vec3*)(tempMemory);
-	int* indices = (int*)(tempMemory + vSize);
+	tempMemory += vSize;
+	int* indices = (int*)(tempMemory);
+	tempMemory += iSize;
+	int* uv_indices = (int*)(tempMemory);
+	tempMemory += uv_iSize;
+	vec2* uvs = (vec2*)(tempMemory);
 
 	//デバッグ用/
 #if ENABLE_DEBUG
@@ -61,6 +109,7 @@ static int _loadAllModel(int isTemp){
 		Model3D* mdl = list[i].r->mdl;
 		ASSERT(mdl->norms == NULL, "法線初期化不足");
 		ASSERT(mdl->vertices == NULL, "頂点初期化不足");
+		ASSERT(mdl->uv == NULL, "uv初期化不足");
 	}
 #endif
 
@@ -73,16 +122,59 @@ static int _loadAllModel(int isTemp){
 		ASSERT(!err, "ファイルが開けなかった");
 		int icnt = 0;
 		int vcnt = 0;
+		int uvcnt = 0;
 		char line[256];
 		bbox_t bbox = {
 		.min = { FLT_MAX,  FLT_MAX,  FLT_MAX },
 		.max = { -FLT_MAX, -FLT_MAX, -FLT_MAX }
 		};
-		int first = 1;
+		FILE* mtlFile = NULL;
+		mdlTextureRLE* texHead = gm_allocate_back(MAX_TEX_SWITCH * sizeof(mdlTextureRLE));
+		mdlTextureRLE* currentTexture = texHead;
+		int switched = 0;
+		*currentTexture = (mdlTextureRLE){ 0 };
+		currentTexture->index = -1;
 		// --- ファイル読み込み --- /
 		while(fgets(line, sizeof(line), fp)){
-			// 先頭がv/
-			if(line[0] == 'v' && line[1] == ' '){
+			// マテリアルファイル/
+			if(!memcmp(line, "mtllib", sizeof("mtllib") - 1)){
+				if(mtlFile != NULL) fclose(mtlFile);
+				char txt_fileName[256 + 3 + 1];
+				char txt_path[256 + 3 + 1];
+				if(sscanf_s(line, "mtllib %s", txt_fileName, (uint32_t)sizeof(txt_fileName))){
+					attachFilePath(request->path, txt_fileName, txt_path);
+					err = fopen_s(&mtlFile, txt_path, "r");
+					ASSERT(!err, "ファイルが開けなかった");
+				}
+				else{
+					ASSERT(0, "マテリアル読み込み失敗");
+				}
+			}
+			//マテリアル変更/
+			else if(!memcmp(line, "usemtl", sizeof("usemtl") - 1)){
+				ASSERT(mtlFile != NULL, "マテリアルファイルを読み込めてないのに待てリファイルの変更が呼ばれた?");
+				int mtlIndex = 0;
+				//0個の場合はずらさない/
+				if(currentTexture->cnt != 0){
+					switched++;
+					ASSERT(switched < MAX_TEX_SWITCH, "テクスチャの切り替え数が多い");
+					currentTexture++;
+					*currentTexture = (mdlTextureRLE){ 0 };
+				}
+				char mtlName[256];
+				sscanf_s(line, "usemtl %s", mtlName, (uint32_t)sizeof(mtlName));
+				mtlIndex = _loadMtlFile_texture(mtlFile, mtlName, request->path);
+				currentTexture->index = mtlIndex;
+			}
+			// uv/
+			else if(line[0] == 'v' && line[1] == 't'){
+				float x, y;
+				// 文字列から3つの浮動小数点数を抽出/
+				if(sscanf_s(line + 2, "%f %f", &x, &y) == 2){
+					uvs[uvcnt++] = (vec2){ x, 1.f - y };//blenderでは左下が原点になってることが多いらしい/
+				}
+			}
+			else if(line[0] == 'v' && line[1] == ' '){
 				float x, y, z;
 				// 文字列から3つの浮動小数点数を抽出/
 				if(sscanf_s(line + 2, "%f %f %f", &x, &y, &z) == 3){
@@ -93,19 +185,30 @@ static int _loadAllModel(int isTemp){
 			}
 			// 先頭がf/
 			else if(line[0] == 'f' && line[1] == ' '){
+				currentTexture->cnt++;
 				int index[3] = { 0 };
+				int uvIndex[3] = { 0 };
 				// f 1/1/1 2/2/2 3/3/3
 				// f 頂点/uv/法線 頂点/uv/法線 頂点/uv/法線 って感じで並んでる/
 				// /%*[^ ] は%[^文字]ってのがあって文字まで変数に突っ込むって感じで*がついてたら突っ込まずに文字まで虫って感じにしてくれる/
 				// つまり今回の場合空白まで無視ってこと/
-				int parsed = sscanf_s(line, "f %d/%*[^ ] %d/%*[^ ] %d", &index[0], &index[1], &index[2]);
+				int parsed = sscanf_s(line, "f %d/%d%*[^ ] %d/%d%*[^ ] %d/%d", &index[0], &uvIndex[0], &index[1], &uvIndex[1], &index[2], &uvIndex[2]);
 
 				//f 1 2 3
 				//だったときのためのやつ/
-				if(parsed != 3){
-					parsed = sscanf_s(line, "f %d %d %d", &index[0], &index[1], &index[2]);
+				if(parsed != 6){
+					parsed = sscanf_s(line, "f %d %d %d", &index[0], &index[1], &index[2]);//ブレークポイントでここは通らなかった/
+					ASSERT(0, "謎 parsed != 6");
 				}
 
+				if(parsed == 6){
+					//詰める/
+					for(int j = 0; j < 3; j++){
+						indices[icnt] = index[j] - 1;// objの1始まりを0始まりにする/
+						uv_indices[icnt] = uvIndex[j] - 1;// objの1始まりを0始まりにする/
+						icnt++;
+					}
+				}
 				if(parsed == 3){
 					//詰める/
 					for(int j = 0; j < 3; j++){
@@ -114,10 +217,17 @@ static int _loadAllModel(int isTemp){
 				}
 			}
 		}
+		if(mtlFile != NULL) fclose(mtlFile);
 		fclose(fp);
 		// --- モデル作成 --- /
 		Model3D* model = request->mdl;
 		//メモリ確保/
+		size_t texRLESize = currentTexture - texHead;
+		//if(texRLESize || currentTexture->cnt){
+		size_t texCpySize = (texRLESize + 1) * sizeof(mdlTextureRLE);
+		model->txInfo = (mdlTextureRLE*)allocator(texCpySize);
+		memcpy(model->txInfo, texHead, texCpySize);
+		//}
 		int triNum = icnt / 3;
 		size_t varticleSize = sizeof(vec3) * icnt;
 		size_t nSize = sizeof(vec3) * triNum;
@@ -132,6 +242,8 @@ static int _loadAllModel(int isTemp){
 		for(int j = 0; j < icnt; j++){
 			int index = indices[j];
 			model->vertices[j] = vertices[index];
+			int uv_index = uv_indices[j];
+			model->uv[j] = uvs[uv_index];
 		}
 		//法線を計算/
 		//objの法線は頂点毎らしいからこっちで面ごとのを計算する/
@@ -142,29 +254,6 @@ static int _loadAllModel(int isTemp){
 			vec3 edge1 = v3sub(v1, v0);
 			vec3 edge2 = v3sub(v2, v0);
 			model->norms[j] = v3normalize(v3cross(edge1, edge2));
-		}
-
-		//test
-		//uvの計算　テスト　法線とまとめると早いけどテストだから分けてる/
-		for(int j = 0; j < triNum; j++){
-			int uvIndex = j * 3;
-			vec3 v0 = model->vertices[uvIndex + 0];
-			vec3 v1 = model->vertices[uvIndex + 1];
-			vec3 v2 = model->vertices[uvIndex + 2];
-			vec3 edge1 = v3sub(v1, v0);//baseX
-			vec3 edge2 = v3sub(v2, v0);
-			float scale = 1 / 100.f;
-			vec3 norm = model->norms[j];//baseZ
-			vec3 baseX = v3mul(v3normalize(edge1), scale);
-			vec3 baseY = v3mul(v3normalize(v3cross(baseX, norm)), scale);//符号は知らん/
-			vec2 uv1 = (vec2){ 0.f,0.f };
-			vec2 uv2 = (vec2){ v3dot(edge1,baseX), 0.f };
-			vec2 uv3 = (vec2){ v3dot(edge2,baseX), -v3dot(edge2,baseY) };
-
-			//0-1の範囲外はリピート/
-			model->uv[uvIndex + 0] = uv1;
-			model->uv[uvIndex + 1] = uv2;
-			model->uv[uvIndex + 2] = uv3;
 		}
 	}
 	//一時メモリの消去/
@@ -202,6 +291,7 @@ int pushLoadRequest(const char* path, Model3D* target){
 int loadAllModel(){
 	return _loadAllModel(0);
 }
+//呼び出し元が後ろの開放をする/
 int loadAllModel_temp(){
 	return _loadAllModel(1);
 }

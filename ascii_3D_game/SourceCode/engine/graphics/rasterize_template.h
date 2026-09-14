@@ -9,7 +9,7 @@
 #endif
 
 //0:sl 1:hs 2:switch
-#define RASTERIZE_TYPE 1
+#define RASTERIZE_TYPE 0
 
 //ハーフスペースとスキャンラインどっち使うかの境目/
 #define RASTERIZE_MODE_SWITCH_AREA (512.f)
@@ -587,12 +587,12 @@ static void FUNC_NAME(drawTri3d)(Screen* sc, vec3 cp[3], vec2 uv[3], float fov, 
 		drawLine(sc, sp[2], sp[0]);// 2 0
 #endif
 		//埋める/
-		float area = getTriArea(sp);
 #if RASTERIZE_TYPE == 0
 		FUNC_NAME(rasterizeTri)(sc, sp, tri_uv, fCtx);//032
 #elif RASTERIZE_TYPE == 1
 		FUNC_NAME(rasterizeTri_halfSpace)(sc, sp, tri_uv, fCtx);//012
 #elif RASTERIZE_TYPE == 2
+		float area = getTriArea(sp);
 		if(area < RASTERIZE_MODE_SWITCH_AREA){
 			FUNC_NAME(rasterizeTri_halfSpace)(sc, sp, tri_uv, fCtx);//012
 		}
@@ -616,13 +616,13 @@ static void FUNC_NAME(drawTri3d)(Screen* sc, vec3 cp[3], vec2 uv[3], float fov, 
 		drawLine(sc, sp[1], sp[2]);// 1 2
 #endif
 		//012の三角形を埋める 3つの配列は後で使うから配列コピーするほうを使う/
-		float area = getTriArea(sp);
 
 #if RASTERIZE_TYPE == 0
 		FUNC_NAME(rasterizeTriCopyArray)(sc, sp, tri_uv, fCtx);//012
 #elif RASTERIZE_TYPE == 1
 		FUNC_NAME(rasterizeTri_halfSpace)(sc, sp, tri_uv, fCtx);//012
 #elif RASTERIZE_TYPE == 2
+		float area = getTriArea(sp);
 		if(area < RASTERIZE_MODE_SWITCH_AREA){
 			FUNC_NAME(rasterizeTri_halfSpace)(sc, sp, tri_uv, fCtx);//012
 		}
@@ -646,13 +646,13 @@ static void FUNC_NAME(drawTri3d)(Screen* sc, vec3 cp[3], vec2 uv[3], float fov, 
 #endif
 
 		// 032の三角形を埋める/
-		area = getTriArea(sp);
 
 #if RASTERIZE_TYPE == 0
 		FUNC_NAME(rasterizeTri)(sc, sp, tri_uv, fCtx);//032
 #elif RASTERIZE_TYPE == 1
 		FUNC_NAME(rasterizeTri_halfSpace)(sc, sp, tri_uv, fCtx);//012
 #elif RASTERIZE_TYPE == 2
+		area = getTriArea(sp);
 		if(area < RASTERIZE_MODE_SWITCH_AREA){
 
 			FUNC_NAME(rasterizeTri_halfSpace)(sc, sp, tri_uv, fCtx);//012

@@ -5,8 +5,8 @@
 #define TO_STRING_X(X) #X
 #define TO_STRING(X) TO_STRING_X(X)
 
-#define AS_OBJ_MODEL_PATH(name)  TO_STRING(ATTACH(ATTACH(./Data/model/obj/,name),.obj)),
-#define AS_STAGE_MODEL_PATH(name)  TO_STRING(ATTACH(ATTACH(./Data/model/stage/,name),.obj)),
+#define AS_OBJ_MODEL_PATH(name)  TO_STRING(ATTACH(ATTACH(.\\Data\\model\\obj\\,name),.obj)),
+#define AS_STAGE_MODEL_PATH(name)  TO_STRING(ATTACH(ATTACH(.\\Data\\model\\stage\\,name),.obj)),
 
 const char* gameObjMdlPathes[] = {
 	GAME_MODEL_LIST_X(AS_OBJ_MODEL_PATH)

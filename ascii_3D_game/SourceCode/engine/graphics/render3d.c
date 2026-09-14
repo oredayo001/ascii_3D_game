@@ -2,10 +2,11 @@
 #include<stdint.h>
 #include"../screen/screen.h"
 #include "../buffer/gameBuff.h"
+#include "loader/textureLoader.h"
 #include<intrin.h>
 
 //なんとなくでやってみたけど結構早かった　simdってすごいんやな/
-#define ENABLE_SIMD 1
+#define ENABLE_SIMD 0
 
 //128 or 256 思ったよりそこまで速度は変わらない/
 //128:600-800fps 256:600-900fps まあ大体このあたりかな(release 512x256px 800ポリゴン くらいの)/
@@ -81,14 +82,6 @@ pixel_t testTex_mario[16 * 16] = {
 	0,0,0,0,8,8,8,0,0,8,8,8,0,0,0,0,
 	0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,
 	0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,
-};
-pixel_t testTex[64 * 64] = {
-#ifdef __INTELLISENSE__
-	0,
-#else
-	//神って書かれたテクスチャ/
-#include"output.txt"
-#endif
 };
 
 #define RENDER_REQUEST_MAX 256
@@ -568,8 +561,15 @@ static void _renderStackAll(RenderStack* __restrict st, Screen* const __restrict
 		//uv
 		vec2* uv = mdl->uv;
 
+		int texID = 0;
+		Texture* texture = getTexture(texID);
+
 		//描画/
 		for(int i = 0; i < vcnt; i += 3){
+
+			//texture
+			
+
 			vec3 cp[3];//頂点/
 
 			//頂点3つをもらう/
@@ -591,7 +591,7 @@ static void _renderStackAll(RenderStack* __restrict st, Screen* const __restrict
 			//Cベクトルも同様で等しいからcp[0]を見るだけでほかのも等しいからそれぞれを見る必要はない
 			//でそもそもの祖の内積は三角形を含む無限に広がる平面への垂直距離を表してる(絶対値が)
 			//だから0になった時はカメラがその平面に含まれてることになる　そんで負になった瞬間が裏面を向いてることになる
-			//感覚的にはわかるけど厳密に数学的に証明しろってゆわれると知らん/
+			//感覚的にはわかるけど厳密に数学的に証明しろってゆわれると知るか/
 			if(.0f < v3dot(cp[0], n))goto skipDraw;
 			//描画/
 			float light = (1.f - v3dot(n, lightVec)) * .7f;
@@ -601,8 +601,8 @@ static void _renderStackAll(RenderStack* __restrict st, Screen* const __restrict
 			_BitScanForward(&traitingZero, txSize);
 			FaceContext fCtx = (FaceContext){
 				.light = light,
-				.texture = testTex,
-				.txSize = txSize,
+				.texture = texture->texture,
+				.txSize = texture->size,
 				.shiftCount = traitingZero,
 				.debug___ = 100
 			};
@@ -697,6 +697,7 @@ static void _pushModel(RenderStack* s, const Model3D* mdl, vec3 p, Basis angle, 
 
 static void _renderStaticRenderStack(const StaticRenderStack* __restrict st, Screen* const __restrict sc, const Camera* const __restrict c){
 	//描画/
+	Texture* texture = getTexture(1);//test
 	for(int i = 0; i < st->triCnt; i++){
 		struct Triangle* triangle = &(st->tri[i]);
 
@@ -715,23 +716,23 @@ static void _renderStaticRenderStack(const StaticRenderStack* __restrict st, Scr
 		}
 
 		//描画/
-		vec2* triUV = &(st->uv[i]);
+		vec2* triUV = &(st->uv[i*3]);
 		_CRT_UNUSED(triUV);//test
 
 		float light = -v3dot(n, lightVec);
 		light = MAX(.5f, light);
-		const int txSize = 64;
+		int txSize = texture->size;
 		unsigned long traitingZero = 0;
 		_BitScanForward(&traitingZero, txSize);
 		FaceContext fCtx = (FaceContext){
 				.light = light,
 				//まだ定数/
-				.texture = testTex,
-				.txSize = 64,
+				.texture = texture->texture,
+				.txSize = txSize,
 				.shiftCount = traitingZero,
 				.debug___ = 100
 		};
-		drawTri3d_normal(sc, cp, testUV, c->fov, &fCtx);
+		drawTri3d_normal(sc, cp, triUV, c->fov, &fCtx);
 	}
 #if ENABLE_DEBUG + 0
 	debugMember.triCntStatic += st->triCnt;

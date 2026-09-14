@@ -1,10 +1,9 @@
 #pragma once
 
 
-#include"common.h"
+#include "common.h"
+#include "../engineTypes.h"
 
-
-typedef uint32_t pixel_t;
 
 typedef struct Screen{
 	char* buff;//printf‚É“n‚³‚ê‚é“z (width + \n) * height

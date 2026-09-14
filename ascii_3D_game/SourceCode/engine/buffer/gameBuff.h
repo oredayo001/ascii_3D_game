@@ -7,8 +7,8 @@
 #define GAME_BUFF_ALIGN_SIZE (1<<GAME_BUFF_ALIGN_SIZE_L2)
 
 //gameBuffのサイズ
-#define GAME_BUFF_SIZE_KB 512
-#define GAME_BUFF_SIZE (1024 * (GAME_BUFF_SIZE_KB))
+#define GAME_BUFF_SIZE_KB 4
+#define GAME_BUFF_SIZE (1024 * 1024 * (GAME_BUFF_SIZE_KB))
 #define ALLOCATOR_MAX_CNT (GAME_BUFF_SIZE/GAME_BUFF_ALIGN_SIZE)
 
 //アロケータのデバックが有効か　1でもenubleDebugが無効なら無効になる/

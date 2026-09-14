@@ -3,7 +3,10 @@
 #include"math/vec3.h"
 
 #define MAX_V_CNT 10000
-
+typedef struct mdlTextureRLE{
+	int index;
+	int cnt;
+}mdlTextureRLE;
 typedef struct bbox_t{
 	vec3 max;
 	vec3 min;
@@ -13,6 +16,7 @@ typedef struct Model3D{
 	vec3* vertices;
 	vec3* norms;
 	vec2* uv;
+	mdlTextureRLE* txInfo;
 	int triCnt;
 	bbox_t bbox;
 	//pad4

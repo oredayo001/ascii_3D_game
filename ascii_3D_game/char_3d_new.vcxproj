@@ -71,6 +71,18 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
@@ -141,7 +153,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="SourceCode\engine\buffer\gameBuff.c" />
+    <ClCompile Include="SourceCode\engine\fileio\fileio.c" />
     <ClCompile Include="SourceCode\engine\graphics\loader\modelLoader.c" />
+    <ClCompile Include="SourceCode\engine\graphics\loader\textureLoader.c" />
     <ClCompile Include="SourceCode\scene\commonManager\gameModelLoader.c" />
     <ClCompile Include="SourceCode\scene\game\manager\cameraControler\cameraManager.c" />
     <ClCompile Include="SourceCode\scene\commonManager\input.c" />
@@ -162,7 +176,10 @@
     <ClInclude Include="backup\render3d_beforeTemplate.txt" />
     <ClInclude Include="SourceCode\engine\buffer\gameBuff.h" />
     <ClInclude Include="SourceCode\common.h" />
+    <ClInclude Include="SourceCode\engine\engineTypes.h" />
+    <ClInclude Include="SourceCode\engine\fileio\fileio.h" />
     <ClInclude Include="SourceCode\engine\graphics\loader\modelLoader.h" />
+    <ClInclude Include="SourceCode\engine\graphics\loader\textureLoader.h" />
     <ClInclude Include="SourceCode\engine\graphics\rasterize_template.h" />
     <ClInclude Include="backup\rasterize_template_halfSpace.txt" />
     <ClInclude Include="SourceCode\engine\graphics\render3d_simd.h" />
