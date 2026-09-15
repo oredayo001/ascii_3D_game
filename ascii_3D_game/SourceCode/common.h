@@ -45,8 +45,8 @@ extern DebugMembers debugMember;//main.cpp
 // --- ‰æ–Ê --- /
 
 //simd‚ğg‚¤ê‡32‚Ì”{”‚ª‚¢‚¢ ‚Æ‚¢‚¤‚©‚»‚¤‚¹‚ñ‚Æ/
-#define WIDTH 512
-#define HEIGHT 256
+#define WIDTH 128
+#define HEIGHT 128
 
 
 

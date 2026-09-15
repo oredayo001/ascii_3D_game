@@ -6,7 +6,7 @@
 #include<intrin.h>
 
 //なんとなくでやってみたけど結構早かった　simdってすごいんやな/
-#define ENABLE_SIMD 0
+#define ENABLE_SIMD 1
 
 //128 or 256 思ったよりそこまで速度は変わらない/
 //128:600-800fps 256:600-900fps まあ大体このあたりかな(release 512x256px 800ポリゴン くらいの)/
@@ -141,6 +141,7 @@ static inline v_int getAsciiShade_simd(v_float v_u, v_float v_v, v_float v_invz,
 	v_float v_lightFalloff_max = simd_set1_ps(1.f);
 	v_float v_mask = simd_cmplt_ps(_v_lightFalloff, v_lightFalloff_max);//((第一)<(第二))?-1:0
 	v_float v_lightFalloff = simd_blendv_ps(v_lightFalloff_max/*false*/, _v_lightFalloff/*true*/, v_mask);
+	v_int v_txsize_i = simd_set1_epi32(fCtx->txSize);
 
 	//context/
 	v_float v_light = simd_set1_ps(fCtx->light);
@@ -160,7 +161,8 @@ static inline v_int getAsciiShade_simd(v_float v_u, v_float v_v, v_float v_invz,
 	v_tex_y = simd_and_si(v_tex_y, v_txMask);
 
 	//テクスチャをもらう/
-	v_int v_index = simd_add_epi32(v_tex_x, simd_slli_epi32(v_tex_y, fCtx->shiftCount));
+	v_int v_index = simd_add_epi32(v_tex_x, simd_mullo_epi32(v_tex_y, v_txsize_i));
+	//v_int v_index = simd_add_epi32(v_tex_x, simd_slli_epi32(v_tex_y, fCtx->shiftCount));
 	//なんかわからんけど1000fps出る用になってる　これをシフト演算にしたおかげ?それともvsを再起動したから？速いときは1100fps/
 
 	v_int v_c = simd_i32gather_epi32((const int*)(fCtx->texture), v_index, 4);

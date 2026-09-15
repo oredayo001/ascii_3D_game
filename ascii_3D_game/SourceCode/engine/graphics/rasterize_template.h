@@ -9,7 +9,8 @@
 #endif
 
 //0:sl 1:hs 2:switch
-#define RASTERIZE_TYPE 0
+#define RASTERIZE_TYPE_X 1
+#define RASTERIZE_TYPE (RASTERIZE_TYPE_X&&ENABLE_SIMD)
 
 //ハーフスペースとスキャンラインどっち使うかの境目/
 #define RASTERIZE_MODE_SWITCH_AREA (512.f)
@@ -154,6 +155,7 @@ static void FUNC_NAME(rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __res
 			v_float v_v_invz = simd_add_ps(simd_add_ps(simd_mul_ps(v_r, v_v0_invz), simd_mul_ps(v_s, v_v1_invz)), simd_mul_ps(v_t, v_v2_invz));
 
 			v_float v_z = simd_rcp_ps(v_invz_new);
+			//v_float v_z = simd_div_ps(v_one,v_invz_new);//あんま変わらんかった/
 
 			v_float v_u = simd_mul_ps(v_u_invz, v_z);
 			v_float v_v = simd_mul_ps(v_v_invz, v_z);
@@ -235,6 +237,8 @@ static void FUNC_NAME(_fillHLineZ)(Screen* sc, int min, int max, vec2 uv1, vec2 
 	v_float v_s_u = simd_set1_ps(s_uv.x * (float)SIMD_STEP);
 	v_float v_s_v = simd_set1_ps(s_uv.y * (float)SIMD_STEP);
 	//float cnt = 0.f;
+
+	//v_float v_one = simd_set1_ps(1.f);
 	for(; x < max_simd; x += SIMD_STEP){
 		//ステップ数で分岐させるやつ その3/
 #define set_x_indices_4 x + 3, x + 2, x + 1, x
@@ -273,6 +277,7 @@ static void FUNC_NAME(_fillHLineZ)(Screen* sc, int min, int max, vec2 uv1, vec2 
 
 		// 逆数/
 		v_float v_z = simd_rcp_ps(v_invz);// 1.f/invz
+		//v_float v_z = simd_div_ps(v_one,v_invz);// 1.f/invz
 		//とりあえず空白/
 		//uint32_t v_ascii_new = ((asciiShade_0 & 0xff) << (8 * 3)) | ((asciiShade_0 & 0xff) << (8 * 2)) | ((asciiShade_0 & 0xff) << (8 * 1)) | ((asciiShade_0 & 0xff) << (8 * 0));
 

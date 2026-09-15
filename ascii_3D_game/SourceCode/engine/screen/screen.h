@@ -152,10 +152,12 @@ X_MACRO_END
 enum{
 	ASCII_SHADE_TABLE_LIST_X(AS_ENUM_ASCII_SHADE_TABLE_X)
 	AS_ENUM_ASCII_SHADE_TABLE_X(max)//num
-	AS_ENUM_ASCII_SHADE_TABLE_X(maxm1 = asciiShade_max - 1)//max-1
+	AS_ENUM_ASCII_TABLE_X(minm1 = asciiShade_max - 1)//max-1
 	ASCII_TABLE_LIST_X(AS_ENUM_ASCII_TABLE_X)
 	AS_ENUM_ASCII_TABLE_X(max)
 };
+
+#define ASCII_SHADE_MAX asciiShade_max
 
 Screen* createScreen();
 void updateScreen(Screen* screen);

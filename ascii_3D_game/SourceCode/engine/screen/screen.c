@@ -16,6 +16,14 @@ const char asciiTable[] = {
 	ASCII_TABLE_LIST_X(AS_ASCII_TABLE)
 };
 
+#define BEIAR_SIZE 4
+const char beiar[BEIAR_SIZE * BEIAR_SIZE] = {
+	1 ,0 ,-1,0 ,
+	0 ,2 ,-2,2 ,
+	-1,-2,1 ,0 ,
+	0 ,2 ,0 ,2 ,
+};
+
 static HANDLE hStdout;//Ž©•ª/
 
 static void initScreen(){
@@ -145,6 +153,9 @@ void updateScreen(Screen* sc){
 			for(int x = 0; x < width; x++){
 				int asciiIndex = px[x];
 				ASSERT(asciiIndex < a_max, "ascii”ÍˆÍŠO");
+				//int bInd = (x & (BEIAR_SIZE - 1)) + (((y & (BEIAR_SIZE - 1))) * BEIAR_SIZE);
+				//int b = beiar[bInd];
+				//asciiIndex += ((0 <= asciiIndex + b) && (asciiIndex + b < a_max)) ? b : 0;
 				p[x] = asciiTable[asciiIndex];//1s•ª‘‚«ž‚Þ/
 			}
 			p += width;//‘‚«ž‚ñ‚¾•ª‚¸‚ç‚·/
