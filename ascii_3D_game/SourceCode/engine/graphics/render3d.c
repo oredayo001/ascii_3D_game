@@ -563,15 +563,19 @@ static void _renderStackAll(RenderStack* __restrict st, Screen* const __restrict
 		//uv
 		vec2* uv = mdl->uv;
 
-		int texID = 0;
-		Texture* texture = getTexture(texID);
+		mdlTextureRLE* currentTexInfo = (mdl->txInfo);
+		mdlTextureRLE currentTex = *currentTexInfo;
+
+		Texture* texture = getTexture(currentTex.index);
 
 		//描画/
 		for(int i = 0; i < vcnt; i += 3){
-
-			//texture
-			
-
+			//テクスチャの切り替え/
+			if((currentTex.cnt) <= 0){
+				currentTexInfo++;//進める/
+				currentTex = *currentTexInfo;
+				texture = getTexture(currentTex.index);
+			}
 			vec3 cp[3];//頂点/
 
 			//頂点3つをもらう/
@@ -612,6 +616,7 @@ static void _renderStackAll(RenderStack* __restrict st, Screen* const __restrict
 			drawTri3d_normal(sc, cp, triUV, c->fov, &fCtx);
 		skipDraw:
 			triCnt++;
+			currentTex.cnt--;
 		}
 	}
 	//clear/
@@ -640,11 +645,15 @@ static StaticRenderStack* _createStaticRenderStack(RenderStack* st){
 	//メモリ確保/
 	StaticRenderStack* r = (StaticRenderStack*)gm_allocate(totalSize);
 
+	r->texInfo = (mdlTextureRLE*)gm_getCurrent();//サイズが決まってない/
+	gm_d_lockMemoly();
+
 	struct Triangle* tris = (struct Triangle*)(&r[1]);
 	vec2* uv = (vec2*)(&tris[totalTri]);
 	r->tri = tris;
 	r->uv = uv;
 	r->triCnt = totalTri;
+	mdlTextureRLE* texInfoDist = r->texInfo;
 
 	totalTri = 0;
 	for(int m = 0; m < st->cnt; m++){
@@ -663,8 +672,20 @@ static StaticRenderStack* _createStaticRenderStack(RenderStack* st){
 		int triCnt = mdl->triCnt;
 		memcpy(&uv[totalTri * 3], mdl->uv, sizeof(vec2) * triCnt * 3);
 
+
+		mdlTextureRLE* currentTexInfo = (mdl->txInfo);
+		mdlTextureRLE currentTex = *currentTexInfo;
+		*(texInfoDist++) = currentTex;//書き込み/
+
 		//描画/
 		for(int t = 0; t < triCnt; t++){//三角形/
+			// --- テクスチャ --- /
+			if((currentTex.cnt) <= 0){
+				currentTexInfo++;//進める/
+				currentTex = *currentTexInfo;
+				*(texInfoDist++) = currentTex;//書き込み/
+			}
+
 			// --- 法線 --- /
 
 			//回転/
@@ -681,8 +702,13 @@ static StaticRenderStack* _createStaticRenderStack(RenderStack* st){
 			}
 
 			totalTri++;
+			currentTex.cnt--;
 		}
 	}
+	//テクスチャのサイズの確定/
+	size_t texMemSize = sizeof(mdlTextureRLE) * ((size_t)(texInfoDist - r->texInfo));
+	gm_increment(texMemSize);
+	gm_d_unlockMemoly();
 	return r;
 }
 
@@ -699,8 +725,17 @@ static void _pushModel(RenderStack* s, const Model3D* mdl, vec3 p, Basis angle, 
 
 static void _renderStaticRenderStack(const StaticRenderStack* __restrict st, Screen* const __restrict sc, const Camera* const __restrict c){
 	//描画/
-	Texture* texture = getTexture(1);//test
+	mdlTextureRLE* currentTexInfo = (st->texInfo);
+	mdlTextureRLE currentTex = *currentTexInfo;
+	Texture* texture = getTexture(currentTex.index);
 	for(int i = 0; i < st->triCnt; i++){
+		//テクスチャの切り替え/
+		if((currentTex.cnt) <= 0){
+			currentTexInfo++;//進める/
+			currentTex = *currentTexInfo;
+			texture = getTexture(currentTex.index);
+		}
+		//三角形の取り出し/
 		struct Triangle* triangle = &(st->tri[i]);
 
 		vec3 cp[3];//頂点/
@@ -714,7 +749,7 @@ static void _renderStaticRenderStack(const StaticRenderStack* __restrict st, Scr
 		//裏面を表示しないやつ/
 		vec3 n = toLocalBasis(c->b, triangle->norm);
 		if(0.f < v3dot(cp[0], n)){
-			continue;
+			goto skipDraw;
 		}
 
 		//描画/
@@ -735,6 +770,8 @@ static void _renderStaticRenderStack(const StaticRenderStack* __restrict st, Scr
 				.debug___ = 100
 		};
 		drawTri3d_normal(sc, cp, triUV, c->fov, &fCtx);
+	skipDraw:
+		currentTex.cnt--;
 	}
 #if ENABLE_DEBUG + 0
 	debugMember.triCntStatic += st->triCnt;
