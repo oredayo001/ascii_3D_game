@@ -16,7 +16,7 @@
 #define ENABLE_ALOCATOR_DEBUG (__ENABLE_ALOCATOR_DEBUG&&ENABLE_DEBUG)
 
 //8byteƒAƒ‰ƒCƒƒ“ƒg/
-#define ALIGN_GM(byte) (_byte + (GAME_BUFF_ALIGN_SIZE - 1)) & (~(GAME_BUFF_ALIGN_SIZE - 1))
+#define ALIGN_GM(byte) (byte + (GAME_BUFF_ALIGN_SIZE - 1)) & (~(GAME_BUFF_ALIGN_SIZE - 1))
 #define BYTE_TO_COUNT(byte) ((byte)>>GAME_BUFF_ALIGN_SIZE_L2)
 #define BYTE_TO_COUNT_U(byte) (((byte)+(GAME_BUFF_ALIGN_SIZE-1))>>GAME_BUFF_ALIGN_SIZE_L2)
 

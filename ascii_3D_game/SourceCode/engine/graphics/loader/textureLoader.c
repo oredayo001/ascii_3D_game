@@ -106,6 +106,9 @@ err:
 }
 
 Texture* getTexture(int id){
+	ASSERT(0 <= id && id < m.texCnt, "範囲外のid");
+	ASSERT(m.textures[id].loded, "ロードされてないテクスチャの取得");
+
 	if(id < 0){
 		return &testTex;
 	}

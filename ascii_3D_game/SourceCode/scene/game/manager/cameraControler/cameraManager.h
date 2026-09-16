@@ -8,6 +8,7 @@ typedef struct Camera Camera;
 #define CAMERA_CONTROLER_LIST_X(X)\
 X(debugCameraControler)\
 X(gameCameraControler)\
+X(gameCameraControler3rd)\
 X_MACRO_END
 
 #define AS_ENUM_CAMERA_CONTROLER_X(name) ATTACH(cameraControler_,name),
@@ -52,8 +53,8 @@ void destroyCameraControler(cameraControler** c);
 //自由に動き回れるカメラ操作 ゲームに1ミリも依存しない/
 void debugCameraControlerInitializer(cameraControler* _controler);
 
-struct objPlayer;
-typedef struct objPlayer objPlayer;
+struct objBase;
+typedef struct objBase objBase;
 //--player
-void gameCameraControlerInitializer(cameraControler* _controler, objPlayer* arg);
-void gameCameraControlerSetFollow(gameCameraControler* _controler, objPlayer* inst);
+void gameCameraControlerInitializer(cameraControler* _controler, objBase* arg);
+void gameCameraControlerSetFollow(gameCameraControler* _controler, objBase* inst);

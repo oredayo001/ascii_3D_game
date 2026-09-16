@@ -40,9 +40,12 @@ typedef union{
 
 //–{•¨‚ÌŒ^/
 #define REAL_INST_PTR_STRUCT \
-struct { \
+union { \
+struct{\
     objBase* ptr; \
     uint32_t generation; \
+}p;\
+	InstPtr __false;/*Œµ–§‚È‚È‚ñ‚â‚©‚ñ‚â‘Îô@‚É‚È‚Á‚Ä‚é‚©‚Í’m‚ç‚ñ‚¯‚Ç*/\
 }
 
 #define DEF_REAL_INST_PTR(T) typedef REAL_INST_PTR_STRUCT T
@@ -57,8 +60,8 @@ static inline InstPtr makeInstPtr(objBase* target){
 	InstPtr r = { 0 };
 	real_instPtr* real = (real_instPtr*)&r;
 	if(target != NULL){//‰½‚©‚µ‚ç‚Í‚³‚µ‚Ä‚é/
-		real->ptr = target;
-		real->generation = target->generation;
+		real->p.ptr = target;
+		real->p.generation = target->generation;
 	}
 	return r;
 }
@@ -68,8 +71,8 @@ static inline int isAliveInstPtr(const InstPtr* _ref){
 	DEF_REAL_INST_PTR(real_instPtr);
 
 	const real_instPtr* ref = (const real_instPtr*)_ref;
-	if(ref->ptr == NULL) return 0;
-	return ref->ptr->generation == ref->generation;
+	if(ref->p.ptr == NULL) return 0;
+	return ref->p.ptr->generation == ref->p.generation;
 }
 
 //Ž€‚ñ‚Å‚½‚çNULL‚ª•Ô‚é/
@@ -78,7 +81,7 @@ static inline objBase* getInstPtr(const InstPtr* _ref){
 
 	if(isAliveInstPtr(_ref)){
 		const real_instPtr* ref = (const real_instPtr*)_ref;
-		return ref->ptr;
+		return ref->p.ptr;
 	}
 	//Ž€‚ñ‚Å‚½‚çnull
 	return NULL;

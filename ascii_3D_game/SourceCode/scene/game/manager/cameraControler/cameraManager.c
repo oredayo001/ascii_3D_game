@@ -81,7 +81,7 @@ void debugCameraControlerInitializer(cameraControler* _controler){
 	controler->fovAngle = .5f;
 }
 //###################################################################################
-// camera controler のテンプレ/
+// 1人称視点/
 //###################################################################################
 
 //---------------------------------------------
@@ -89,7 +89,7 @@ void debugCameraControlerInitializer(cameraControler* _controler){
 //---------------------------------------------
 struct gameCameraControler{
 	CameraColtrolerBase;
-	objPlayer* follow;
+	InstPtr follow;
 	float fovAngle;
 	float dist;
 	vec3 angle;
@@ -98,6 +98,9 @@ struct gameCameraControler{
 static void gameCameraControlerUpdate(cameraControler* _controler){
 	gameCameraControler* controler = (gameCameraControler*)_controler;
 	Camera* c = controler->base.camera;
+	objBase* follow = getInstPtr(&(controler->follow));//ポインタをもらう　すでに死んでたらnull/
+
+	if(follow == NULL) return;//死んでる/
 
 	//angle
 	const float cameraAngleXspd = .01f;
@@ -122,20 +125,99 @@ static void gameCameraControlerUpdate(cameraControler* _controler){
 		}
 		controler->angle = b.z;
 		vec2 noY = angleToVec2(b.z);
-		
-		controler->follow->cameraIn = createVec2Basis(noY);
+
+		if(follow->attribute & objAtt_playable){
+			vec2Basis* pCameraInput = follow->interfaces->playableInterface.getCameraIn(follow);
+			*pCameraInput = createVec2Basis(noY);
+		}
 	}
 
-	objBase* follow = &(controler->follow->base);
+
+	vec3 followPos = v3add(follow->render->p, v3mul(v3y, 160.f));
+	//pos
+	c->p = followPos;
+
+	//c->p = targetPos;
+	c->b = createBasis(controler->angle);
+}
+
+//---------------------------------------------
+// public:
+//---------------------------------------------
+void gameCameraControlerInitializer(cameraControler* _controler, objBase* follow){
+	gameCameraControler* controler = (gameCameraControler*)_controler;
+	controler->fovAngle = .5f;
+	controler->follow = makeInstPtr(follow);
+	controler->angle = v3z;
+	controler->dist = 160.f * 10;
+	controler->focus = follow->render->p;
+	_controler->update = gameCameraControlerUpdate;
+	_controler->camera->fov = angleToFov(controler->fovAngle);
+}
+
+void gameCameraControlerSetFollow(gameCameraControler* controler, objBase* inst){
+	controler->follow = makeInstPtr(inst);
+}
+//###################################################################################
+// 3人称視点/
+//###################################################################################
+
+//---------------------------------------------
+// private:
+//---------------------------------------------
+struct gameCameraControler3rd{
+	CameraColtrolerBase;
+	InstPtr follow;
+	float fovAngle;
+	float dist;
+	vec3 angle;
+	vec3 focus;
+};
+static void gameCameraControler3rdUpdate(cameraControler* _controler){
+	gameCameraControler3rd* controler = (gameCameraControler3rd*)_controler;
+	Camera* c = controler->base.camera;
+	objBase* follow = getInstPtr(&(controler->follow));//ポインタをもらう　すでに死んでたらnull/
+	
+	if(follow == NULL) return;//死んでる/
+
+	//angle
+	const float cameraAngleXspd = .01f;
+	const float cameraAngleYspd = .01f;
+	float dx = getMouseDx();
+	float dy = getMouseDy();
+	if(dx || dy){
+		Basis b = createBasis(controler->angle);
+		vec3 lastAngle = b.z;
+		float h = dx * cameraAngleXspd;
+		float v = -dy * cameraAngleYspd;
+		//TODO y制限/
+		b.z = v3normalize(v3add(b.z, v3add(v3mul(b.x, h), v3mul(b.y, v))));
+		const float maxY = .94f;
+		if(maxY < fabsf(b.z.y)){
+			//横だけ/
+			vec3 hOnly = v3normalize(v3add(lastAngle, v3mul(b.x, h)));
+			//縦を最大値にする/
+			hOnly.y = b.z.y > 0 ? maxY : -maxY;
+			//正規化/
+			b.z = v3normalize(hOnly);
+		}
+		controler->angle = b.z;
+		vec2 noY = angleToVec2(b.z);
+
+		if(follow->attribute & objAtt_playable){
+			vec2Basis* pCameraInput = follow->interfaces->playableInterface.getCameraIn(follow);
+			*pCameraInput = createVec2Basis(noY);
+		}
+	}
 
 
-	vec3 targetFocus = v3add(follow->render->p, v3mul(v3y,160.f));
+	vec3 targetFocus = v3add(follow->render->p, v3mul(v3y, 160.f));
 	targetFocus = v3add(follow->render->p, follow->v);
 	//場所 + 向き * -距離/
 	vec3 targetPos = v3add(targetFocus, v3mul(controler->angle, -controler->dist));
 
 	//線形補完/
-	
+
 	//focus
 	const float focusSpd = .7f;
 	vec3 focusSub = v3sub(targetFocus, controler->focus);
@@ -150,35 +232,24 @@ static void gameCameraControlerUpdate(cameraControler* _controler){
 	vec3 angle = v3normalize(v3sub(controler->focus, c->p));
 	//c->p = targetPos;
 	c->b = createBasis(angle);
-	
-	/*
-	float fovDir = (float)(keyboardCheck(vk_arrow_up) - keyboardCheck(vk_arrow_down));
-	float fovSpd = .1f;
-	controler->fovAngle += fovDir * fovSpd;
-	if(controler->fovAngle < 0) controler->fovAngle = .001f;
-#if ENABLE_DEBUG + 0
-	debugMember.fovAngle = controler->fovAngle;
-#endif
-	c->fov = angleToFov(controler->fovAngle);
-	*/
 }
 
 //---------------------------------------------
 // public:
 //---------------------------------------------
-void gameCameraControlerInitializer(cameraControler* _controler, objPlayer* follow){
-	gameCameraControler* controler = (gameCameraControler*)_controler;
+void gameCameraControler3rdInitializer(cameraControler* _controler, objBase* follow){
+	gameCameraControler3rd* controler = (gameCameraControler3rd*)_controler;
 	controler->fovAngle = .25f;
-	controler->follow = follow;
+	controler->follow = makeInstPtr(follow);
 	controler->angle = v3z;
-	controler->dist = 160.f*10;
-	controler->focus = follow->base.render->p;
-	_controler->update = gameCameraControlerUpdate;
+	controler->dist = 160.f * 10;
+	controler->focus = follow->render->p;
+	_controler->update = gameCameraControler3rdUpdate;
 	_controler->camera->fov = angleToFov(controler->fovAngle);
 }
 
-void gameCameraControlerSetFollow(gameCameraControler* controler, objPlayer* inst){
-	controler->follow = inst;
+void gameCameraControler3rdSetFollow(gameCameraControler3rd* controler, objBase* inst){
+	controler->follow = makeInstPtr(inst);
 }
 
 //###################################################################################
@@ -206,7 +277,7 @@ cameraControler* createCameraControler(Camera* camera){
 	if(r == NULL) return NULL;//エラーチェック/
 
 	// --- 初期化 --- /
-	 
+
 	//与えられたメモリを0初期化/
 	*(MaxCameraControlerMemory*)r = (MaxCameraControlerMemory){ 0 };
 	//カメラをセット/

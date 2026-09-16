@@ -6,6 +6,7 @@
 
 //objcts
 #include "obj/player.h"
+#include "obj/dummy_character.h"
 
 //######################################################################
 // DEBUG
@@ -13,6 +14,14 @@
 
 //もしうまく動かないときのデバッグ用　アロケーターが悪いかを調べるときにしか使わない/
 #define UNUSE_MY_ALLOCATOR 0
+
+//obj周りのまあ一般的なデバッグ/
+#define _ENABLE_DEBUG_X 1
+#define _ENABLE_DEBUG (ENABLE_DEBUG&&_ENABLE_DEBUG_X)
+
+//ランダムなタイミングでダミーのオブジェクトの生成破壊を繰り返すモード/
+#define _ENABLE_DEBUG_INST_CHURN_X 1
+#define _ENABLE_DEBUG_INST_CHURN (_ENABLE_DEBUG&&_ENABLE_DEBUG_INST_CHURN_X)
 
 //######################################################################
 // private:
@@ -160,6 +169,7 @@ typedef objInitOut(*objInitializeFunc)(objBase*);
 #define AS_OBJ_INITIALIZE_TABLE(name,type,...) AS_OBJ_INITIALISE_FUNC(name),
 #define AS_OBJ_SIZE_TABLE(temp,type,...) sizeof(type),
 #define AS_OBJ_ATTRIBUTE_BIT_MASKLIST(temp,temp2,mask,...) mask,
+#define AS_OBJ_NAME_TABLE(name,...) #name,
 
 #pragma endregion ここまでがテンプレ
 
@@ -180,6 +190,12 @@ static const uint32_t objAttributeTable[] = {
 	OBJECTS_LIST_X(AS_OBJ_ATTRIBUTE_BIT_MASKLIST)
 };
 
+#if _ENABLE_DEBUG
+static const char* objNameTable[] = {
+	OBJECTS_LIST_X(AS_OBJ_NAME_TABLE)
+};
+#endif
+
 // ---------------------------------------------------------
 // ここからが天ぷら
 // ---------------------------------------------------------
@@ -194,6 +210,9 @@ static struct{
 	objBase* instances[MAX_OBJECTS];//描画には使われない部分/
 	int cnt;
 	int currentGeneration;
+#if _ENABLE_DEBUG
+	int debug_instID[MAX_OBJECTS];
+#endif
 }m;
 
 // --- 個々の操作 --- /
@@ -220,7 +239,7 @@ static void eraseInstance(int instanceId){
 	if(m.cnt != instanceId){//後ろと違うときだけ交換/
 		//後ろを前に持ってくる/
 		//cnt:移動元　instanceID:消去対象 兼 移動先/
-		
+
 		//render
 		m.instancesRender[instanceId] = m.instancesRender[m.cnt];//後ろを消すキャラの床に上書き/
 		//inst
@@ -229,11 +248,87 @@ static void eraseInstance(int instanceId){
 	}
 	//一応/
 	m.instances[m.cnt] = NULL;
+#if _ENABLE_DEBUG
+	memset(&(m.instancesRender[m.cnt]), 0xff, sizeof(objRender));//移動前のはわかりやすくごみデータで埋める(デバッグ時のみ)/
+	//誰かが死んで位置が変わった後も参照され続けてたら明らかにおかしい動きになる/
+	(m.debug_instID[m.cnt]) = objId;
+#endif
 }
 
 // --- 全インスタンスに対する操作 --- /
 
+//初期化/
+static void _initInstances(){
+#if _ENABLE_DEBUG
+	memset(m.instancesRender, 0xff, sizeof(m.instancesRender));//ごみデータで埋める/
+	memset(m.debug_instID, 0xff, sizeof(m.debug_instID));//ごみデータで埋める/
+#endif
+}
+
+//debug
+static void d_checkObjRenderPtrUsed(){
+#if _ENABLE_DEBUG
+	objRender deathData;
+	memset(&deathData, 0xff, sizeof(objRender));
+	for(int i = m.cnt; i < MAX_OBJECTS; i++){
+		//例えばrender*をどっかが長期保存しててそれに書き込んだ場合0xfff...からどこかが変わるはず　それを検知するプログラム/
+		objRender* inst = &(m.instancesRender[i]);
+		uint32_t id = m.debug_instID[i];
+		if(memcmp(inst, &deathData, sizeof(objRender))){
+			debugMSG(
+				"objRender",
+				"使われてないobjRenderの書き換えを検知 どこかでobjRender*を1f以上保持した後書き換えた可能性が高い\nちゃうかったらどっかでポインタが暴走したか"
+			);
+			char txt[512];
+			if(id == ~0u){
+				debugMSG(
+					"objRender",
+					"idが初期値だから一度も触られてない場所の可能性が高い　と考えるとポインタの暴走の可能性高?"
+				);
+			}
+			else{
+				snprintf(txt, 256, "書き換えられたやつの元のobjID:%d\nobjName:'%s'", id, objNameTable[id]);
+				debugMSG(
+					"objRender",
+					txt
+				);
+			}
+			snprintf(txt, 256, "\
+中身 floatは-nanが正常値 -nanじゃないのが書き換えられている値\n\
+modelはffff...が正常値 それ以外は書き換えられてる\n\
+---model---\n\
+%p\n\
+---angle---\n\
+%f,%f,%f\n\
+%f,%f,%f\n\
+%f,%f,%f\n\
+---pos---\n\
+%f,%f,%f\n\
+---scale---\n\
+%f,%f,%f\n\
+				",
+				inst->model,
+				inst->angle.x.x, inst->angle.x.y, inst->angle.x.z,
+				inst->angle.y.x, inst->angle.y.y, inst->angle.y.z,
+				inst->angle.z.x, inst->angle.z.y, inst->angle.z.z,
+				inst->p.x, inst->p.y, inst->p.z,
+				inst->scale.x, inst->scale.y, inst->scale.z
+			);
+			debugMSG(
+				"objRender",
+				txt
+			);
+
+
+		}
+		*inst = deathData;
+	}
+#endif //debug objRenderの不正な書き込みの監視/
+}
+
+//更新/
 static void updateAllInstances(){
+	d_checkObjRenderPtrUsed();
 	// --- 更新 --- /
 	for(int i = 0; i < m.cnt; i++){
 		//アドレスをもらう/
@@ -241,6 +336,14 @@ static void updateAllInstances(){
 		++inst->timer;
 		inst->step(inst);
 	}
+	d_checkObjRenderPtrUsed();
+#if _ENABLE_DEBUG_INST_CHURN
+	if((m.cnt < (MAX_OBJECTS / 2)) && !(rand() & 0xff)){
+		instanceCreate(obj_dummy_debug, v3zero);
+	}
+	d_checkObjRenderPtrUsed();
+#endif
+
 	// --- 当たり判定 --- /
 
 	//LOW 当たり判定 プレイヤー出してカメラ出来て地形との当たり判定できたそのあと/
@@ -255,6 +358,9 @@ static void updateAllInstances(){
 			//すでにチェック済みの後ろをiの移動させるからiはもう一度確認する必要がない/
 		}
 	}
+#if ENABLE_DEBUG
+	debugMember.objNum = m.cnt;
+#endif
 }
 
 //全員を描画(まあキューに入れるだけ)
@@ -282,7 +388,7 @@ static void _destroyInstances(){
 
 //初期化関数ポインタの型/
 typedef objInitOut(*initFunc)(objBase*);
-static objBase* spawnObj(initFunc initializer, size_t size,uint32_t attribute, vec3 p){
+static objBase* spawnObj(initFunc initializer, size_t size, uint32_t attribute, vec3 p){
 	ASSERT(m.cnt < MAX_OBJECTS, "オブジェクトあふれ");
 	//メモリをもらう/
 	objBase* r = objAllocate(size);
@@ -300,7 +406,7 @@ static objBase* spawnObj(initFunc initializer, size_t size,uint32_t attribute, v
 	r->timer = 0;
 	r->attribute = attribute;
 
-	if(m.currentGeneration == GENERATION_DEAD)m.currentGeneration = GENERATION_DEAD+1;//念のため まあ万が一 一周したときのためのやつ/
+	if(m.currentGeneration == GENERATION_DEAD)m.currentGeneration = GENERATION_DEAD + 1;//念のため まあ万が一 一周したときのためのやつ/
 	r->generation = m.currentGeneration++;
 	//カウント/
 	m.cnt++;
@@ -317,7 +423,13 @@ static objBase* spawnObj(initFunc initializer, size_t size,uint32_t attribute, v
 //インスタンスの初期化/
 void initInstances(){
 	initAllocator();
+	_initInstances();
 	ASSERT(m.cnt == 0, "なぜかinstancesのcntが0じゃない");
+#if _ENABLE_DEBUG_INST_CHURN
+	for(int i = 0; i < 32; i++){
+		instanceCreate(obj_dummy_debug, v3zero);
+	}
+#endif
 }
 
 //全更新/

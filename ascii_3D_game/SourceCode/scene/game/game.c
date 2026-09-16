@@ -46,7 +46,7 @@ static void debug_changeCamera(){
 		//--switch--/
 	case 0:
 		player = (objPlayer*)instanceCreate(obj_player, (vec3){ 0.f, 5000.f, 0.f });
-		gameCameraControlerInitializer(m.cameraControler, player);
+		gameCameraControlerInitializer(m.cameraControler, (objBase*)player);
 		break;
 	case 1:
 	{
@@ -96,7 +96,7 @@ static void gameInit(ISystemContext* context){
 	//プレイヤー/
 	player = (objPlayer*)instanceCreate(obj_player, (vec3){ 0, 5000.f, 0 });
 	//カメラ/
-	gameCameraControlerInitializer(m.cameraControler, player);
+	gameCameraControlerInitializer(m.cameraControler, (objBase*)player);
 	//テクスチャ/
 	initTextureLoader(getMaxTextureID() + 1);
 	//モデル/
@@ -123,11 +123,11 @@ static void gameUpdate(){
 	setKeyStates(m.keyStates);
 	updateMouse(.7f);
 
-	//カメラ/
-	updateCamera(m.cameraControler);
-
 	//obj
 	updateInstances();
+
+	//カメラ/
+	updateCamera(m.cameraControler);
 
 	//終了か/
 	if(lib_keyboardCheck(vk_esc, m.keyStates->p)) requestChangeScene(titleSetFunc);

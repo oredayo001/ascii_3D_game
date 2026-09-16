@@ -56,6 +56,7 @@ typedef struct objBase{
 #define OBJ_ATTRIBUTE_LIST_X(X)\
 X(player)\
 X(enemy)\
+X(playable)/*カメラ操作が可能*/\
 X_MACRO_END
 
 // --- attribute mask --- /
@@ -89,6 +90,9 @@ struct AS_TYPEDEF_IINTERFASES_NAME(player){//一旦nullは無しがいいかな/
 struct AS_TYPEDEF_IINTERFASES_NAME(enemy){
 	void* p;//とりあえず/
 };
+struct AS_TYPEDEF_IINTERFASES_NAME(playable){
+	vec2Basis* (*getCameraIn)(objBase* me);//とりあえず/
+};
 
 // -- base
 #define AS_ALL_OBJ_INTERFACE_NAME(name) ATTACH(name,Interface)
@@ -113,7 +117,8 @@ struct objIInterfaceVTable{
 /*
 X(名前,型名,属性ビットマスク)\
 名前は重複不可　型は重複可*/\
-X(player, objPlayer, objAtt_player)\
+X(player, objPlayer, objAtt_player|objAtt_playable)\
+X(dummy_debug, objDummy_debug, objAtt_player|objAtt_playable)\
 X_MACRO_END
 
 //前方宣言 まあ全オブジェクトを一括で前方宣言する　オブジェクトはstruct obj...って定義するようにするとobjListに追加するの忘れてたらコンパイルエラーになってくれるからミスに気づきやすい/

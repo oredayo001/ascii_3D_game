@@ -28,6 +28,7 @@ typedef struct DebugMembers{
 	int triCntStatic;
 	float fovAngle;
 	int memolyUsed;
+	int objNum;
 }DebugMembers;
 extern DebugMembers debugMember;//main.cpp
 //ƒŠƒeƒ‰ƒ‹‚Ì‚Ý/

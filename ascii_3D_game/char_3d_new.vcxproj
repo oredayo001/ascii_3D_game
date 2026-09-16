@@ -161,6 +161,7 @@
     <ClCompile Include="SourceCode\scene\commonManager\input.c" />
     <ClCompile Include="SourceCode\scene\game\manager\map\mapManager.c" />
     <ClCompile Include="SourceCode\scene\game\manager\obj\objManager.c" />
+    <ClCompile Include="SourceCode\scene\game\manager\obj\obj\dummy_character.c" />
     <ClCompile Include="SourceCode\scene\game\manager\obj\obj\player.c" />
     <ClCompile Include="SourceCode\_lib\control\control.c" />
     <ClCompile Include="SourceCode\_lib\debug\debug.c" />
@@ -189,6 +190,7 @@
     <ClInclude Include="SourceCode\scene\game\manager\obj\objDef.h" />
     <ClInclude Include="SourceCode\scene\game\manager\obj\objManager.h" />
     <ClInclude Include="SourceCode\scene\commonManager\input.h" />
+    <ClInclude Include="SourceCode\scene\game\manager\obj\obj\dummy_character.h" />
     <ClInclude Include="SourceCode\scene\game\manager\obj\obj\player.h" />
     <ClInclude Include="SourceCode\_lib\allocator\allocator.h" />
     <ClInclude Include="SourceCode\_lib\control\control.h" />

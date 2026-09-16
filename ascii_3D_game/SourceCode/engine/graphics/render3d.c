@@ -33,7 +33,7 @@
 #define ENABLE_UV
 
 //なんかバグの5割はこいつをでかくしたら治る/
-#define near 50.f
+#define near 25.f
 #define far 5000.f
 
 //ワイヤーの最大描画距離/
@@ -588,19 +588,19 @@ static void _renderStackAll(RenderStack* __restrict st, Screen* const __restrict
 
 			//裏面を表示しないやつ/
 			//法線/
-			vec3 n = mdl->norms[triCnt];
-			n = toGlobalBasis(angle, n);
-			n = toLocalBasis(c->b, n);
+			vec3 wn = mdl->norms[triCnt];
+			wn = toGlobalBasis(angle, wn);
+			vec3 n = toLocalBasis(c->b, wn);
 			//法線ととある編は垂直だからn・AB = 0
 			//つまりn・(B-A) = 0 (ABベクトルは　BベクトルとAベクトルの差ベクトル)
 			//よって(n・B)-(N・A) = 0 まあ要はBとの内積もAとの内積も等しい
 			//Cベクトルも同様で等しいからcp[0]を見るだけでほかのも等しいからそれぞれを見る必要はない
 			//でそもそもの祖の内積は三角形を含む無限に広がる平面への垂直距離を表してる(絶対値が)
 			//だから0になった時はカメラがその平面に含まれてることになる　そんで負になった瞬間が裏面を向いてることになる
-			//感覚的にはわかるけど厳密に数学的に証明しろってゆわれると知るか/
+			//感覚的にはわかるけど厳密に数学的に証明しろって?だまれ/
 			if(.0f < v3dot(cp[0], n))goto skipDraw;
 			//描画/
-			float light = (1.f - v3dot(n, lightVec)) * .7f;
+			float light = (1.f - v3dot(wn, lightVec)) * .7f;
 			light = CLAMP(light, .2f, 1.f);
 			const int txSize = 64;
 			unsigned long traitingZero = 0;
@@ -756,7 +756,7 @@ static void _renderStaticRenderStack(const StaticRenderStack* __restrict st, Scr
 		vec2* triUV = &(st->uv[i*3]);
 		_CRT_UNUSED(triUV);//test
 
-		float light = -v3dot(n, lightVec);
+		float light = -v3dot(triangle->norm, lightVec);
 		light = MAX(.5f, light);
 		int txSize = texture->size;
 		unsigned long traitingZero = 0;

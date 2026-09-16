@@ -373,18 +373,30 @@ void s_idle(objBase* base){//‰Šú‰»—p/
 	s_idleStep(base);
 }
 
+
+//##################################################################
+// interface:
+//##################################################################
+
 // --- destroy --- /
 static void destroy(objBase* base){
 	SELF(me);
 	_CRT_UNUSED(me);
 }
-
-//##################################################################
-// interface:
-//##################################################################
+// --- playable --- /
+static vec2Basis* getCameraIn(objBase* base){
+	SELF(me);
+	return &(me->cameraIn);
+}
+// --- set --- /
 static objIInterfaceVTable interfaceVTable = {
 	.destroy = destroy,//ˆê’U/
-	.playerInterface = {.p = NULL },
+	.playerInterface = {
+		.p = NULL
+	},
+	.playableInterface = {
+		.getCameraIn = getCameraIn,
+	},
 };
 
 //##################################################################

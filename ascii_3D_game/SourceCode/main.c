@@ -55,7 +55,7 @@ static void loop(){
 			debugMember.memolyUsed = gm_getMarker()*GAME_BUFF_ALIGN_SIZE;
 			char txt[256];
 #define d(x) debugMember.x
-			snprintf(txt, 256, "fps:%d\npolygone:%d\nstaticPolygone:%d\nfovAngle%f\nusedMem%dB,%dKB ", d(fps), d(triCnt), d(triCntStatic),d(fovAngle),d(memolyUsed),d(memolyUsed)/1024);
+			snprintf(txt, 256, "fps:%d\npolygone:%d\nstaticPolygone:%d\nfovAngle:%f\nusedMem:%dB,%dKB\nobjNum:%d ", d(fps), d(triCnt), d(triCntStatic),d(fovAngle),d(memolyUsed),d(memolyUsed)/1024,d(objNum));
 #undef d
 			debugMSG("debug text", txt);
 		}
