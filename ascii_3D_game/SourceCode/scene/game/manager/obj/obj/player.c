@@ -4,8 +4,8 @@
 #include"scene/commonManager/input.h"
 #include"scene/game/manager/map/mapManager.h"
 
-#define baseCast(me) ((objBase*)me)
-#define playerCast(me) ((objPlayer*)me)
+#define baseCast(me) ((objBase*)(me))
+#define playerCast(me) ((objPlayer*)(me))
 
 //–½–¼‹K‘¥‚ğç‚è‚â‚·‚­‚·‚é“I‚È/
 #define playerInitializer AS_OBJ_INITIALISE_FUNC(player)
@@ -37,10 +37,10 @@ const float walkJumpPow = 30.f;
 //const float walkInputInfluence = 1.f;
 const float walkFriction = .99f;
 
-//walk
-#define WALK_XZ_BRAKE .8f
-const float sneakXZBrake = WALK_XZ_BRAKE;
-const float sneakXZSpd = GET_SPD(SNEAK_SPD, WALK_XZ_BRAKE);//const‚Í’è”®‚É‚ÍŠÜ‚ß‚ê‚È‚¢‚ç‚µ‚¢ <-‚ÍH/
+//sneak
+#define SNEAK_XZ_BRAKE .8f
+const float sneakXZBrake = SNEAK_XZ_BRAKE;
+const float sneakXZSpd = GET_SPD(SNEAK_SPD, SNEAK_XZ_BRAKE);
 const float sneakFriction = .99f;
 
 //idle
@@ -267,7 +267,7 @@ static void _mapCollision(objPlayer* me, float frictionInfluence, collisionResul
 	trueBreakPoint(fabsf(me->base.v.x) > 10000.f);
 
 	// --- •Ç --- /
-	{
+	for(int i = 0;i<2;i++){
 		wallResult r;
 		const float radius = playerRadius;
 		vec3 checkPos = me->base.render->p;
@@ -563,5 +563,5 @@ objInitOut playerInitializer(objBase* base){
 	me->cameraIn = vec2basisY;
 	me->inputMemoly = (playerInMemoly){ 0 };
 	me->height = playerHeight;
-	return (objInitOut){ .step = s_idle, .model = getObjMdl(objModel_player), .interfaces = &interfaceVTable };
+	return (objInitOut){ .step = s_idle, .model = NULL, .interfaces = &interfaceVTable };
 }

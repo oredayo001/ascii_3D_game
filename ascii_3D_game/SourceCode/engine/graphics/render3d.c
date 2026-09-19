@@ -715,6 +715,7 @@ static StaticRenderStack* _createStaticRenderStack(RenderStack* st){
 }
 
 static void _pushModel(RenderStack* s, const Model3D* mdl, vec3 p, Basis angle, vec3 scale){
+	if(mdl == NULL) return;
 	ASSERT(s->cnt < RENDER_REQUEST_MAX, "RenderStack “ü‚ê‚·‚¬");
 	//‹l‚ß‚é/
 	s->mdl[s->cnt] = mdl;

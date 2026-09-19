@@ -12,11 +12,11 @@
 #define ALLOCATOR_MAX_CNT (GAME_BUFF_SIZE/GAME_BUFF_ALIGN_SIZE)
 
 //アロケータのデバックが有効か　1でもenubleDebugが無効なら無効になる/
-#define __ENABLE_ALOCATOR_DEBUG 1
-#define ENABLE_ALOCATOR_DEBUG (__ENABLE_ALOCATOR_DEBUG&&ENABLE_DEBUG)
+#define __ENABLE_ALLOCATOR_DEBUG 1
+#define ENABLE_ALLOCATOR_DEBUG (__ENABLE_ALLOCATOR_DEBUG&&ENABLE_DEBUG)
 
 //8byteアライメント/
-#define ALIGN_GM(byte) (byte + (GAME_BUFF_ALIGN_SIZE - 1)) & (~(GAME_BUFF_ALIGN_SIZE - 1))
+#define ALIGN_GM(byte) ((byte) + (GAME_BUFF_ALIGN_SIZE - 1)) & (~(GAME_BUFF_ALIGN_SIZE - 1))
 #define BYTE_TO_COUNT(byte) ((byte)>>GAME_BUFF_ALIGN_SIZE_L2)
 #define BYTE_TO_COUNT_U(byte) (((byte)+(GAME_BUFF_ALIGN_SIZE-1))>>GAME_BUFF_ALIGN_SIZE_L2)
 
@@ -34,7 +34,7 @@ typedef struct AllocatorInfo{
 	uint64_t* buff;
 	int current;
 	int capacity;
-#if ENABLE_ALOCATOR_DEBUG
+#if ENABLE_ALLOCATOR_DEBUG
 	int currentStack;
 	uint32_t useableFlag;//使ってはいけないかどうかのフラグ/
 	int usedBackMem;
@@ -47,7 +47,7 @@ extern AllocatorInfo gameAllocator;
 
 // --- debug --- /
 
-#if ENABLE_ALOCATOR_DEBUG
+#if ENABLE_ALLOCATOR_DEBUG
 #define _FLAG (gameAllocator.useableFlag)
 #define _FLAG_ON(i) _FLAG |= 1<<(i)
 #define _FLAG_OFF(i) _FLAG &= ~(1<<(i))
@@ -108,7 +108,7 @@ static inline void* gm_allocate(size_t byte){
 //一時的に使うけどスタックに影響するとだめな時に使う/
 static inline void* gm_allocate_back(size_t byte){
 	int cnt = (int)BYTE_TO_COUNT_U(byte);
-#if ENABLE_ALOCATOR_DEBUG
+#if ENABLE_ALLOCATOR_DEBUG
 	gameAllocator.usedBackMem = 1;
 #endif
 	gameAllocator.capacity -= cnt;
@@ -116,7 +116,7 @@ static inline void* gm_allocate_back(size_t byte){
 }
 //backの開放/
 static inline void gm_free_back(){
-#if ENABLE_ALOCATOR_DEBUG
+#if ENABLE_ALLOCATOR_DEBUG
 	ASSERT(gameAllocator.usedBackMem, "必要のない開放 gm");
 	gameAllocator.usedBackMem = 0;
 #endif

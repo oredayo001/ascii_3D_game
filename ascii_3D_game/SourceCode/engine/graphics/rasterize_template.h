@@ -21,18 +21,6 @@
 #error//widthがSIMD_ALIGNの倍数じゃない loadで死ぬ(loaduにしてない)
 #endif
 //ハーフスペース/
-/*
-	int xMin = MAX((int)(MIN3(sp[0].x, sp[1].x, sp[2].x)), 0);
-	int xMax = MIN((int)(MAX3(sp[0].x, sp[1].x, sp[2].x)), (WIDTH - 1));
-	int yMin = MAX((int)(MIN3(sp[0].y, sp[1].y, sp[2].y)), 0);
-	int yMax = MIN((int)(MAX3(sp[0].y, sp[1].y, sp[2].y)), (HEIGHT - 1));
-	int xMin = 0;
-	int xMax = (WIDTH - 1);
-	int yMin = 0;
-	int yMax = (HEIGHT - 1);
-*/
-//test
-//#include"scene/game/game.h"
 static void FUNC_NAME(rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __restrict sp, vec2* __restrict uv, FaceContext* __restrict fCtx){
 
 	// --- aabb --- /

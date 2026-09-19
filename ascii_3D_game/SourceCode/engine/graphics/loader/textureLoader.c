@@ -12,7 +12,7 @@ static const pixel_t testTex_img[64 * 64] = {
 #else
 	//神って書かれたテクスチャ/
 #include"output.txt"
-#endif
+#endif 
 };
 static const pixel_t testTex_flat[] = {
 	28
@@ -115,6 +115,7 @@ err:
 }
 
 Texture* getTexture(int id){
+	//一旦テクスチャないやつは仮のテクスチャを出す/
 	if(id == -1){
 		return &testTex;
 	}

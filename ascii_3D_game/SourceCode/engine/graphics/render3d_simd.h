@@ -64,14 +64,20 @@ typedef __m128i v_int;
 #define simd_set1_epi32 _mm_set1_epi32
 //全部に0をセットする/
 #define simd_setzero_si128 _mm_setzero_si128
+//全部に0をセットする/
+#define simd_setzero_ps _mm_setzero_ps
 //floatの足し算/
 #define simd_add_ps _mm_add_ps
 //符号付きの足し算/
 #define simd_add_epi32 _mm_add_epi32
 //符号付きの引き算/
 #define simd_sub_epi32 _mm_sub_epi32
+//符号付きの引き算/
+#define simd_sub_ps _mm_sub_ps
 //掛け算/
 #define simd_mul_ps _mm_mul_ps
+//割り算/
+#define simd_div_ps _mm_div_ps
 //符号付きの足し算　オーバーフローしたとこは無視/
 #define simd_mullo_epi32 _mm_mullo_epi32
 //多分シフト演算/
@@ -82,6 +88,7 @@ typedef __m128i v_int;
 #define simd_cmplt_ps _mm_cmplt_ps
 //イメージ各要素に ((第一)<(第二))?-1:0 を代入する感じ/
 #define simd_cmplt_epi32 _mm_cmplt_epi32
+#define simd_cmple_ps _mm_cmple_ps
 //and
 #define simd_and_ps _mm_and_ps
 //and
@@ -169,7 +176,7 @@ typedef __m256i v_int;
 //全部に0をセットする/
 #define simd_setzero_si256 _mm256_setzero_si256/*!変更*/
 //全部に0をセットする/
-#define simd_setzero_ps256 _mm256_setzero_ps/*!変更*/
+#define simd_setzero_ps _mm256_setzero_ps/*!変更*/
 //floatの足し算/
 #define simd_add_ps _mm256_add_ps
 //符号付きの足し算/
@@ -231,8 +238,6 @@ typedef __m256i v_int;
 #define simd_store_si simd_store_si256
 //全部に0をセットする/
 #define simd_setzero_si simd_setzero_si256
-//全部に0をセットする/
-#define simd_setzero_ps simd_setzero_ps256
 //256bit全部のand
 #define simd_and_si simd_and_si256
 //ps to si256 (再解釈するだけ)
