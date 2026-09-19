@@ -85,13 +85,14 @@ enum{
 //!typedefはつけない/
 //! こいつらはobjIInterfaceVTableの中で使うだけでこいつだけを使うことは基本無い　はず/
 struct AS_TYPEDEF_IINTERFASES_NAME(player){//一旦nullは無しがいいかな/
-	void* p;//とりあえず/
+	void* p;//今のとこ何もない/
 };
 struct AS_TYPEDEF_IINTERFASES_NAME(enemy){
-	void* p;//とりあえず/
+	void* p;//今のとこ何もない/
 };
 struct AS_TYPEDEF_IINTERFASES_NAME(playable){
-	vec2Basis* (*getCameraIn)(objBase* me);//とりあえず/
+	vec2Basis* (*getCameraIn)(objBase* me);//カメラ入力のポインタのゲッター/
+	vec3(*getEyePos)(objBase* me);//目線の高さをもらう/
 };
 
 // -- base
@@ -107,7 +108,6 @@ struct objIInterfaceVTable{
 	OBJ_ATTRIBUTE_LIST_X(AS_ALL_OBJ_INTERFACES)//;はもうついてる/
 };
 
-
 // -----------------------------------------------------------
 // 各obj
 // -----------------------------------------------------------
@@ -117,8 +117,8 @@ struct objIInterfaceVTable{
 /*
 X(名前,型名,属性ビットマスク)\
 名前は重複不可　型は重複可*/\
-X(player, objPlayer, objAtt_player|objAtt_playable)\
-X(dummy_debug, objDummy_debug, objAtt_player|objAtt_playable)\
+X(player, objPlayer, objAtt_player | objAtt_playable)\
+X(dummy_debug, objDummy_debug, 0)\
 X_MACRO_END
 
 //前方宣言 まあ全オブジェクトを一括で前方宣言する　オブジェクトはstruct obj...って定義するようにするとobjListに追加するの忘れてたらコンパイルエラーになってくれるからミスに気づきやすい/

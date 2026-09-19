@@ -33,11 +33,11 @@
 #define ENABLE_UV
 
 //なんかバグの5割はこいつをでかくしたら治る/
-#define near 25.f
+#define near 15.f
 #define far 5000.f
 
 //ワイヤーの最大描画距離/
-#define WIRE_MAX_FAR 2500.f
+#define WIRE_MAX_FAR 200.f
 #define WIRE_MAX_INV_FAR (1.f/WIRE_MAX_FAR)
 //明るさが半減する距離/
 const float shadeLength = ((WIRE_MAX_FAR / 5.f) * 2.f);
@@ -92,6 +92,7 @@ typedef struct FaceContext{
 	int txSize;
 	int shiftCount;
 	int debug___;
+	float shadeLength;
 } FaceContext;
 
 typedef struct RenderStack{
@@ -136,7 +137,7 @@ static inline pixel_t getAsciiShade(vec2 uv, float invz, FaceContext* fCtx){
 static inline v_int getAsciiShade_simd(v_float v_u, v_float v_v, v_float v_invz, FaceContext* fCtx){
 	_ASSERT(((fCtx->txSize) & (fCtx->txSize - 1)) == 0, "テクスチャが2の累乗じゃない");
 	//光の減衰/
-	v_float v_shadeLength = simd_set1_ps(shadeLength);
+	v_float v_shadeLength = simd_set1_ps(fCtx->shadeLength);
 	v_float _v_lightFalloff = simd_mul_ps(v_invz, v_shadeLength);
 	v_float v_lightFalloff_max = simd_set1_ps(1.f);
 	v_float v_mask = simd_cmplt_ps(_v_lightFalloff, v_lightFalloff_max);//((第一)<(第二))?-1:0
@@ -610,7 +611,8 @@ static void _renderStackAll(RenderStack* __restrict st, Screen* const __restrict
 				.texture = texture->texture,
 				.txSize = texture->size,
 				.shiftCount = traitingZero,
-				.debug___ = 100
+				.debug___ = 100,
+				.shadeLength = c->shadeLength,
 			};
 			vec2* triUV = &uv[i];
 			drawTri3d_normal(sc, cp, triUV, c->fov, &fCtx);
@@ -756,8 +758,9 @@ static void _renderStaticRenderStack(const StaticRenderStack* __restrict st, Scr
 		vec2* triUV = &(st->uv[i*3]);
 		_CRT_UNUSED(triUV);//test
 
-		float light = -v3dot(triangle->norm, lightVec);
-		light = MAX(.5f, light);
+		const float lightMin = .7f;
+		float light = -v3dot(triangle->norm, c->lightVec);
+		light = lightMin + ((1.f + light) * .5f) * (1.f - lightMin);
 		int txSize = texture->size;
 		unsigned long traitingZero = 0;
 		_BitScanForward(&traitingZero, txSize);
@@ -767,7 +770,8 @@ static void _renderStaticRenderStack(const StaticRenderStack* __restrict st, Scr
 				.texture = texture->texture,
 				.txSize = txSize,
 				.shiftCount = traitingZero,
-				.debug___ = 100
+				.debug___ = 100,
+				.shadeLength = c->shadeLength,
 		};
 		drawTri3d_normal(sc, cp, triUV, c->fov, &fCtx);
 	skipDraw:
@@ -847,10 +851,11 @@ void renderStaticRenderStack(StaticRenderStack* __restrict st, const RenderConte
 Camera* createCamera(){
 	//メモリ確保/
 	Camera* r = (Camera*)gm_allocate(sizeof(Camera));
-	if(r == NULL) return NULL;//エラーチェック/
 	//初期化/
 	*r = (Camera){ 0 };
 	r->fov = angleToFov(.25f);//45度/
+	r->lightVec = v3normalize((vec3){ 200.f, 50.f, -1000.f });
+	r->shadeLength = 80.f;
 	return r;
 }
 

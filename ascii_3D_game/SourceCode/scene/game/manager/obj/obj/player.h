@@ -15,7 +15,8 @@ typedef struct playerInMemoly{
 struct objPlayer{
 	OBJ_BASE;//åpè≥ìIÇ»/
 	vec2Basis cameraIn;
+	float height;
 	playerInMemoly inputMemoly;
-	uint16_t __pad;//16ó]ÇË/
+	uint16_t flags;
 };
 

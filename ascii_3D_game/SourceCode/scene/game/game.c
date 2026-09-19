@@ -37,6 +37,9 @@ static struct{
 
 #pragma region debug
 
+//#define playerPos (vec3){ 0.f, 5000.f, 0.f }
+#define playerPos v3zero
+
 static objPlayer* player = NULL;
 
 static void debug_changeCamera(){
@@ -45,7 +48,7 @@ static void debug_changeCamera(){
 	switch(mode){
 		//--switch--/
 	case 0:
-		player = (objPlayer*)instanceCreate(obj_player, (vec3){ 0.f, 5000.f, 0.f });
+		player = (objPlayer*)instanceCreate(obj_player, playerPos);
 		gameCameraControlerInitializer(m.cameraControler, (objBase*)player);
 		break;
 	case 1:
@@ -94,7 +97,7 @@ static void gameInit(ISystemContext* context){
 	m.stage_memolyMarker = gm_getMarker();
 
 	//プレイヤー/
-	player = (objPlayer*)instanceCreate(obj_player, (vec3){ 0, 5000.f, 0 });
+	player = (objPlayer*)instanceCreate(obj_player, playerPos);
 	//カメラ/
 	gameCameraControlerInitializer(m.cameraControler, (objBase*)player);
 	//テクスチャ/
@@ -105,7 +108,7 @@ static void gameInit(ISystemContext* context){
 	m.rCtx->c->b = basisZ;
 
 	int stageModelMarker = gm_getMarker_back();
-	loadStageModel(stageModel_stageDemo);
+	loadStageModel(stageModel_stage01);
 	//test
 	//Model3D* playerMdl = getObjMdl(objModel_player);
 

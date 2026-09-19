@@ -38,8 +38,8 @@ static struct{
 //######################################################################
 
 static inline int getTriType(vec3 norm){
-	if(.1f < norm.y) return triType_floor;//下向き/
-	else if(norm.y < -.1f) return triType_ceiling;//上向き/
+	if(.15f < norm.y) return triType_floor;//下向き/
+	else if(norm.y < -.15f) return triType_ceiling;//上向き/
 	else return triType_wall;//ほぼ垂直/
 }
 
@@ -170,7 +170,7 @@ static int isHitTrisEdge(vec2 p, float len, vec2 v0, vec2 v1, vec2 v2){
 	return 0;//false
 }
 
-static void _getNearestSurface(mapCollisionData* map, StaticRenderStack* polygones, vec3 p, vec3 v, fcResult* result, vec3 rayV_m, int triType){
+static void _getNearestSurface(mapCollisionData* __restrict map, StaticRenderStack* __restrict polygones, vec3 p, vec3 v, fcResult* __restrict result, float checkRange, vec3 rayV_m, int triType){
 	//LOW gx gz の範囲外チェックやら/
 	int gx = getGrid(FtoINT(p.x));
 	int gz = getGrid(FtoINT(p.z));
@@ -232,7 +232,7 @@ static void _getNearestSurface(mapCollisionData* map, StaticRenderStack* polygon
 			//tは高さと同じ/
 			float ft = v3dot(v3cross(sub, edge1), edge2);
 			//数字は許容範囲/
-			if(ft < -160.f * f) continue;//!magic
+			if(ft < -checkRange * f) continue;//!magic
 			float t = ft / f;//ここで割る/
 			//最小を求める/
 			if(t < minDist){
@@ -396,12 +396,12 @@ void destroyMap(){
 }
 
 // --- 機能 --- /
-void getNearestFloorDist(vec3 p, vec3 v, fcResult* result){
-	_getNearestSurface(&(m.mapData), m.worldModel, p, v, result, v3y, triType_floor);//下ベクトルだからマイナスは上ベクトル/
+void getNearestFloorDist(vec3 p, vec3 v, float checkRange, fcResult* result){
+	_getNearestSurface(&(m.mapData), m.worldModel, p, v, result, checkRange, v3y, triType_floor);//下ベクトルだからマイナスは上ベクトル/
 }
 
-void getNearestCeilingDist(vec3 p, vec3 v, fcResult* result){
-	_getNearestSurface(&(m.mapData), m.worldModel, p, v, result, v3ym, triType_ceiling);//上ベクトルだからマイナスは下ベクトル/
+void getNearestCeilingDist(vec3 p, vec3 v, float checkRange, fcResult* result){
+	_getNearestSurface(&(m.mapData), m.worldModel, p, v, result, checkRange, v3ym, triType_ceiling);//上ベクトルだからマイナスは下ベクトル/
 }
 
 void getNearestWall(vec3 p, vec3 v, float r, float h, wallResult* result){

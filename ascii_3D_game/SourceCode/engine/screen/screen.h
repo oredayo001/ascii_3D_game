@@ -35,7 +35,7 @@ X_MACRO_END
 #define ASCII_SHADE_TABLE_LIST_X(X)\
 X(0     ,' ')\
 X(1     ,'.')\
-X(2     ,'`')\
+X(2     ,'\'')\
 X(3     ,',')\
 X(4     ,':')\
 X(5     ,';')\

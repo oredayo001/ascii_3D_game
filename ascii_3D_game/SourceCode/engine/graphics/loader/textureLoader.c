@@ -14,10 +14,19 @@ static const pixel_t testTex_img[64 * 64] = {
 #include"output.txt"
 #endif
 };
+static const pixel_t testTex_flat[] = {
+	28
+};
 
 static Texture testTex = {
 	.texture = testTex_img,
 	.size = 64,
+	.loded = 1
+};
+
+static Texture flatTex = {
+	.texture = testTex_flat,
+	.size = 1,
 	.loded = 1
 };
 
@@ -106,11 +115,15 @@ err:
 }
 
 Texture* getTexture(int id){
-	ASSERT(0 <= id && id < m.texCnt, "範囲外のid");
-	ASSERT(m.textures[id].loded, "ロードされてないテクスチャの取得");
-
-	if(id < 0){
+	if(id == -1){
 		return &testTex;
 	}
-	else return &m.textures[id];
+	if(id < -1){
+		return &flatTex;
+	}
+	else{
+		ASSERT(0 <= id && id < m.texCnt, "範囲外のid");
+		ASSERT(m.textures[id].loded, "ロードされてないテクスチャの取得");
+		return &m.textures[id];
+	}
 }

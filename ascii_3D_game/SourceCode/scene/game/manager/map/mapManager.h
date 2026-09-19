@@ -38,8 +38,8 @@ typedef struct{
 	vec3 norm;
 }wallResult;
 
-void getNearestFloorDist(vec3 p, vec3 v, fcResult* result);
+void getNearestFloorDist(vec3 p, vec3 v, float checkRange, fcResult* result);
 
-void getNearestCeilingDist(vec3 p, vec3 v, fcResult* result);
+void getNearestCeilingDist(vec3 p, vec3 v, float checkRange, fcResult* result);
 
 void getNearestWall(vec3 p, vec3 v, float r, float h, wallResult* result);

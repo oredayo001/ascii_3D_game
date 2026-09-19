@@ -9,6 +9,7 @@ X(player)\
 X_MACRO_END
 #define GAME_STAGE_MODEL_LIST_X(X)\
 X(stageDemo)\
+X(stage01)\
 X_MACRO_END
 
 #define AS_GAME_MODEL_LIST_ENUM_X(name) ATTACH(objModel_,name),

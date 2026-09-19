@@ -24,7 +24,9 @@ typedef struct{
 typedef struct Camera{
 	vec3 p;
 	Basis b;//b.z‚ªangle
+	vec3 lightVec;
 	float fov;//Šp“x@pi‚ğœ‚­/
+	float shadeLength;
 }Camera;
 //fov‚ÌŒvZ/
 

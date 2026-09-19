@@ -91,9 +91,9 @@ struct gameCameraControler{
 	CameraColtrolerBase;
 	InstPtr follow;
 	float fovAngle;
-	float dist;
 	vec3 angle;
-	vec3 focus;
+	vec3 off;
+
 };
 static void gameCameraControlerUpdate(cameraControler* _controler){
 	gameCameraControler* controler = (gameCameraControler*)_controler;
@@ -107,6 +107,7 @@ static void gameCameraControlerUpdate(cameraControler* _controler){
 	const float cameraAngleYspd = .01f;
 	float dx = getMouseDx();
 	float dy = getMouseDy();
+
 	if(dx || dy){
 		Basis b = createBasis(controler->angle);
 		vec3 lastAngle = b.z;
@@ -132,9 +133,13 @@ static void gameCameraControlerUpdate(cameraControler* _controler){
 		}
 	}
 
+	//offset
+	vec3 targetOffset = v3zero;
+	if(follow->attribute & objAtt_playable)targetOffset = follow->interfaces->playableInterface.getEyePos(follow);
+	controler->off = v3add(controler->off, v3mul(v3sub(targetOffset, controler->off), .25f));
 
-	vec3 followPos = v3add(follow->render->p, v3mul(v3y, 160.f));
 	//pos
+	vec3 followPos = v3add(follow->render->p, controler->off);
 	c->p = followPos;
 
 	//c->p = targetPos;
@@ -149,8 +154,7 @@ void gameCameraControlerInitializer(cameraControler* _controler, objBase* follow
 	controler->fovAngle = .5f;
 	controler->follow = makeInstPtr(follow);
 	controler->angle = v3z;
-	controler->dist = 160.f * 10;
-	controler->focus = follow->render->p;
+	controler->off = v3zero;
 	_controler->update = gameCameraControlerUpdate;
 	_controler->camera->fov = angleToFov(controler->fovAngle);
 }
