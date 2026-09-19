@@ -364,3 +364,4 @@ FodyWeavers.xsd
 
 !/ascii_3D_game/Data/**
 !/ascii_3D_game/SourceCode/**
+/ascii_3D_game/memo.h
