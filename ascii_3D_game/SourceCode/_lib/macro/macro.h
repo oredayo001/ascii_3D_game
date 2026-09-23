@@ -20,3 +20,6 @@
 #define HELPER(X) X
 
 #define DO_NOTHING do{}while(0)
+
+
+#define IS_STATIC_CONSTANT(x) _Generic((1?((void*)((x) * 0ull)) : &(int){1}),int*: 1,void*: 0)

@@ -4,26 +4,35 @@
 #include"control/control.h"
 
 
-#include<stdint.h>
-#include<stddef.h>
+#include <stdint.h>
+#include <float.h>
+#include <stddef.h>
 //fps
-#include<time.h>
+#include <time.h>
 //malloc free
-#include<stdlib.h>
+#include <stdlib.h>
 //printf
-#include<stdio.h>
+#include <stdio.h>
 //getch(debug)
-#include<conio.h>
+#include <conio.h>
 //memset
-#include<string.h>
+#include <string.h>
+
+#include <assert.h>
 
 // --- debug --- /
 #define ENABLE_DEBUG 1
+#define ENABLE_DEBUG_MAIN_STRONG_X 1
+#define _ENABLE_DEBUG_MAIN (ENABLE_DEBUG||ENABLE_DEBUG_MAIN_STRONG_X)
 
 #include"debug/debug.h"
-#if ENABLE_DEBUG + 0
+#if _ENABLE_DEBUG_MAIN + 0
 typedef struct DebugMembers{
+	int lastFpsCount;
+	int fps_noFix;
 	int fps;
+	uint32_t fps_sum;
+	uint32_t fps_countedNum;
 	int triCnt;
 	int triCntStatic;
 	float fovAngle;
@@ -49,7 +58,14 @@ extern DebugMembers debugMember;//main.cpp
 #define WIDTH 128
 #define HEIGHT 128
 
+// --- thread --- /
 
+//Ç∆ÇËÇ†Ç¶Ç∏/
+#define THREAD_NUM 4
+#define THREAD_STACK_SIZE (4*1024)//Ç∆ÇËÇ†Ç¶Ç∏/
+
+//ï÷óò/
+#define ARRAY_SIZE(x) (sizeof((x))/sizeof((x)[0]))
 
 //äÎÇ»Ç¢É}ÉNÉçÇè¡Ç∑/
 #undef max

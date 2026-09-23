@@ -19,13 +19,13 @@ static const pixel_t testTex_flat[] = {
 };
 
 static Texture testTex = {
-	.texture = testTex_img,
+	.texture = (pixel_t*)testTex_img,
 	.size = 64,
 	.loded = 1
 };
 
 static Texture flatTex = {
-	.texture = testTex_flat,
+	.texture = (pixel_t*)testTex_flat,
 	.size = 1,
 	.loded = 1
 };
@@ -87,7 +87,7 @@ int loadTexture(const char* path){
 	//id
 	int id = 0;
 	fread(&id, sizeof(int), 1, f);
-	ASSERT(id <= m.textures->size, "初期化時のサイズを超えるid");
+	ASSERT(id <= m.texCnt, "初期化時のサイズを超えるid");
 	Texture* tex = &m.textures[id];
 	ASSERT(0 <= id && id < m.texCnt, "範囲外のid");
 
@@ -100,9 +100,9 @@ int loadTexture(const char* path){
 	ASSERT(!((tex->size - 1) & (tex->size)), "textureが2の累乗じゃない");
 
 	//texture
-	int px = tex->size * tex->size;
+	size_t px = (size_t)(tex->size * tex->size);
 	tex->texture = gm_allocate(px * sizeof(pixel_t));
-	int readCnt = fread(tex->texture, sizeof(pixel_t), px, f);
+	size_t readCnt = fread(tex->texture, sizeof(pixel_t), px, f);
 	ASSERT(readCnt == px, "ファイルのデータがおかしい");
 
 	tex->loded = 1;

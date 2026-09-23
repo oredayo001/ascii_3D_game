@@ -16,7 +16,7 @@ const char* attachFilePath(const char* baseFile, const char* relative, char* dis
 	// base_dir ‚ª ".\Data\model\name.mtl" ‚©‚ç ".\Data\model" ‚Æ‚©‚É‚È‚é/
 
 	//Œ‹‡/
-	HRESULT hr = PathCombineA(
+	LPSTR hr = PathCombineA(
 		dist,//o—Í/
 		base_dir,//Šî€/
 		relative // Œ‹‡‚µ‚½‚¢‘Š‘ÎƒpƒX

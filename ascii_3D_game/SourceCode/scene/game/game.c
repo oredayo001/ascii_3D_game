@@ -98,13 +98,14 @@ static void gameInit(ISystemContext* context){
 
 	//プレイヤー/
 	player = (objPlayer*)instanceCreate(obj_player, playerPos);
+	instanceCreate(obj_chaser, (vec3){ 312.089f, -500.000f, -324.060f });//(312.089,-500.000,-324.060)
 	//カメラ/
 	gameCameraControlerInitializer(m.cameraControler, (objBase*)player);
 	//テクスチャ/
 	initTextureLoader(getMaxTextureID() + 1);
 	//モデル/
-	int mdlIndexes = objModel_player;
-	loadObjModels(&mdlIndexes, 1);
+	int mdlIndexes[2] = { objModel_player,objModel_chaser };
+	loadObjModels(mdlIndexes, ARRAY_SIZE(mdlIndexes));
 	m.rCtx->c->b = basisZ;
 
 	int stageModelMarker = gm_getMarker_back();
@@ -154,7 +155,7 @@ static void gameRender(){
 	renderInstances();
 
 	// --- 描画 --- /
-	renderMap(m.rCtx);
+	renderMap();
 	renderStackAll(m.rCtx);
 
 	if(m.toggleShading)shadingScreen(m.rCtx->sc);

@@ -64,12 +64,12 @@ const uint16_t jumpBuffTime = 10;
 //各stateの更新関数の初期化関数のプロトタイプ宣言
 //------------------------------------------------------------------
 
+//ジャンプ/
+static void s_jump(objBase* base);
 //歩き/
 static void s_walk(objBase* base);
 //歩き/
 static void s_sneak(objBase* base);
-//ジャンプ/
-static void s_jump(objBase* base);
 //入力待ち/
 static void s_idle(objBase* base);
 
@@ -154,6 +154,7 @@ static void updateVelXZ(objPlayer* me, playerIn in, float spd, float brake){
 
 //死んだ関数　とある数値より下にいるかを返す/
 static bool isOnGround(objPlayer* me){
+	_CRT_UNUSED(me);
 	return 0;// (me->base.render->p.y) <= -50.f;
 }
 
@@ -169,7 +170,7 @@ typedef struct{
 } collisionResult;//当たり判定が返すやつ/
 //当たり判定/
 static void _mapCollision(objPlayer* me, float frictionInfluence, collisionResult* result){
-	vec3Print("player", me->base.render->p);
+	
 	// --- 床 --- /
 	trueBreakPoint(fabsf(me->base.v.x) > 10000.f);
 
@@ -177,7 +178,6 @@ static void _mapCollision(objPlayer* me, float frictionInfluence, collisionResul
 		fcResult r;
 		getNearestFloorDist(me->base.render->p, me->base.v, me->height, &r);
 		if(r.nextMinDist < 0.f){//速度的に床を追い越すか/
-			vec3 lastV = me->base.v;
 			// --- 垂直抗力を速度に加算 ---
 
 			//取り除く/
@@ -291,6 +291,7 @@ static void _mapCollision(objPlayer* me, float frictionInfluence, collisionResul
 
 //地形の当たり判定
 static void mapCollision(objPlayer* me, float flictionInfluence){
+	vec3Print("player", me->base.render->p);
 	collisionResult r;
 	r = (collisionResult){ 0 };
 	for(int i = 0; i < 1; i++){
@@ -372,9 +373,6 @@ static void walkChangeState(objPlayer* me, playerIn in){
 
 // --- sneak --- /
 static void sneakChangeState(objPlayer* me, playerIn in){
-	float spdSq = v3lensq(me->base.v);
-	const float minSpd = 4.f;
-	int noInput = !(in.xDir || in.zDir);
 	if(in.jumpPressed || in.sneakPreassed){
 		//立ち上がれるか調べる/
 		if(canStandUp(me)){

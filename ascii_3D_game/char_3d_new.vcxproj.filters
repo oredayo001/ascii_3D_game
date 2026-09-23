@@ -13,6 +13,30 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="ソース ファイル\obj">
+      <UniqueIdentifier>{eb57f4b0-ffcf-447d-9a60-6c1488b5da97}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\obj\player">
+      <UniqueIdentifier>{8f135a99-8cad-4936-94f5-cad1c4639cf4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\obj\enemy">
+      <UniqueIdentifier>{03144915-5ad0-45ff-9940-3b2abb945372}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ソース ファイル\obj\_debug">
+      <UniqueIdentifier>{319ac97c-bf0e-4939-81db-9e4b9fd55050}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\obj">
+      <UniqueIdentifier>{b1e86377-c83a-4535-899c-1648456c4c18}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\obj\player">
+      <UniqueIdentifier>{87b41d16-20a3-4984-a97f-5acab6bcf655}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\obj\enemy">
+      <UniqueIdentifier>{ba20deb0-6c6a-466a-bde6-0346ed97279d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ヘッダー ファイル\obj\_debug">
+      <UniqueIdentifier>{2885ea85-9296-4d0a-a573-419767ce9eb0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SourceCode\main.c">
@@ -57,9 +81,6 @@
     <ClCompile Include="SourceCode\scene\game\manager\obj\objManager.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
-    <ClCompile Include="SourceCode\scene\game\manager\obj\obj\player.c">
-      <Filter>ソース ファイル</Filter>
-    </ClCompile>
     <ClCompile Include="SourceCode\scene\game\manager\map\mapManager.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -72,7 +93,16 @@
     <ClCompile Include="SourceCode\engine\fileio\fileio.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="SourceCode\scene\game\manager\obj\obj\chaser.c">
+      <Filter>ソース ファイル\obj\enemy</Filter>
+    </ClCompile>
+    <ClCompile Include="SourceCode\scene\game\manager\obj\obj\player.c">
+      <Filter>ソース ファイル\obj\player</Filter>
+    </ClCompile>
     <ClCompile Include="SourceCode\scene\game\manager\obj\obj\dummy_character.c">
+      <Filter>ソース ファイル\obj\_debug</Filter>
+    </ClCompile>
+    <ClCompile Include="SourceCode\engine\thread\thread.c">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
@@ -167,7 +197,16 @@
     <ClInclude Include="SourceCode\engine\fileio\fileio.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="SourceCode\scene\game\manager\obj\obj\chaser.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+    <ClInclude Include="SourceCode\scene\game\manager\obj\obj\_objects.h">
+      <Filter>ヘッダー ファイル\obj</Filter>
+    </ClInclude>
     <ClInclude Include="SourceCode\scene\game\manager\obj\obj\dummy_character.h">
+      <Filter>ヘッダー ファイル\obj\_debug</Filter>
+    </ClInclude>
+    <ClInclude Include="SourceCode\engine\thread\thread.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

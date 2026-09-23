@@ -13,7 +13,7 @@
 
 //ƒ‰ƒ“ƒ_ƒ€‚É€–S/
 static void randDeath(objBase* base){
-	SELF(me);
+	SELF(me); _CRT_UNUSED(me);
 	//me->pp->p.x = 0.f;//ŒÃ‚¢render‚Ì‘‚«‚İ@‚»‚Ì‚¤‚¿Á‚·/
 	if(!(rand() & 0x3ff)){
 		instanceDestroy(base);

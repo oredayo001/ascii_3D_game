@@ -49,6 +49,7 @@ extern AllocatorInfo gameAllocator;
 
 #if ENABLE_ALLOCATOR_DEBUG
 #define _FLAG (gameAllocator.useableFlag)
+#define _IS_FLAG_OFF (!(gameAllocator.useableFlag))
 #define _FLAG_ON(i) _FLAG |= 1<<(i)
 #define _FLAG_OFF(i) _FLAG &= ~(1<<(i))
 #define _FLAG_READ(i) (((_FLAG)>>(i))&1)
@@ -71,11 +72,15 @@ static inline void gm_d_assertStack(int stack){
 }
 
 #else
-#define gm_d_usedAsTempMem() DO_NOTHING
-#define gm_d_freeTempMem() DO_NOTHING
-#define gm_d_pushStack() DO_NOTHING
-#define gm_d_popStack() DO_NOTHING
-#define gm_d_assertStack() DO_NOTHING
+#define _FLAG 1
+#define _IS_FLAG_OFF 1//assum(1)になるようにする/
+#define gm_d_usedAsTempMem(...) DO_NOTHING
+#define gm_d_freeTempMem(...) DO_NOTHING
+#define gm_d_pushStack(...) DO_NOTHING
+#define gm_d_popStack(...) DO_NOTHING
+#define gm_d_assertStack(...) DO_NOTHING
+#define gm_d_lockMemoly(...) DO_NOTHING
+#define gm_d_unlockMemoly(...) DO_NOTHING
 #endif
 
 // --- 機能 --- /
@@ -87,7 +92,7 @@ static inline void gm_freeToMarker(int marker){ gameAllocator.current = marker; 
 //今の位置をもらう/
 //一時的に使うときから何バイトいるかわからん時とかに使える/
 static inline void* gm_getCurrent(){
-	ASSERT(!_FLAG, "使ってはいけないときに一時として使った gm");
+	ASSERT(_IS_FLAG_OFF, "使ってはいけないときに一時として使った gm");
 	return &(gameAllocator.buff[gameAllocator.current]);
 }
 //ポインタをバイト分進める/
@@ -100,7 +105,7 @@ static inline void gm_increment(size_t byte){
 }
 //メモリをもらう/
 static inline void* gm_allocate(size_t byte){
-	ASSERT(!_FLAG, "使ってはいけないときに一時として使った gm");
+	ASSERT(_IS_FLAG_OFF, "使ってはいけないときに一時として使った gm");
 	void* r = gm_getCurrent();
 	gm_increment(byte);
 	return r;

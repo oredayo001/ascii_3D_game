@@ -6,6 +6,7 @@
 
 #define GAME_MODEL_LIST_X(X)\
 X(player)\
+X(chaser)\
 X_MACRO_END
 #define GAME_STAGE_MODEL_LIST_X(X)\
 X(stageDemo)\

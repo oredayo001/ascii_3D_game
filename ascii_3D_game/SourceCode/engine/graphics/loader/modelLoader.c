@@ -51,14 +51,13 @@ static int _loadMtlFile_texture(FILE* mtlFile, const char* mtlName, const char* 
 			char mtlName_l[256] = { 0 };
 			sscanf_s(line, "newmtl %s", mtlName_l, (uint32_t)sizeof(mtlName_l));
 
-			int check = 0;
-			int len1 = strlen(mtlName);
-			int len2 = strlen(mtlName_l);
+			size_t len1 = strlen(mtlName);
+			size_t len2 = strlen(mtlName_l);
 			if(len1 != len2)continue;
 			if(!memcmp(mtlName_l, mtlName, len1))goto findMTL;//一致/
 		}
 	}
-	ASSERT(0, "マテリアルが見つからんかった");
+	debugMSG("assert", "マテリアルが見つからんかった");
 	return -1;
 findMTL:
 	while(fgets(line, sizeof(line), mtlFile)){
@@ -71,7 +70,7 @@ findMTL:
 		}
 		if(!memcmp(line, "newmtl", sizeof("newmtl") - 1))break;//次のマテリアルを読んでる/
 	}
-	ASSERT(0, "テクスチャが見つからんかった");//今んとこはないとおかしい/
+	debugMSG("assert", "テクスチャが見つからんかった");
 	return -1;
 }
 
@@ -107,7 +106,7 @@ static int _loadAllModel(int isTemp){
 	//デバッグ用/
 #if ENABLE_DEBUG
 	for(int i = 0; i < list->cnt; i++){
-		Model3D* mdl = list[i].r->mdl;
+		Model3D* mdl = list->r[i].mdl;
 		ASSERT(mdl->norms == NULL, "法線初期化不足");
 		ASSERT(mdl->vertices == NULL, "頂点初期化不足");
 		ASSERT(mdl->uv == NULL, "uv初期化不足");
@@ -247,10 +246,10 @@ static int _loadAllModel(int isTemp){
 		int triNum = icnt / 3;
 		size_t varticleSize = sizeof(vec3) * icnt;
 		size_t nSize = sizeof(vec3) * triNum;
-		size_t uvSize = sizeof(vec2) * icnt;
+		size_t uvSize_mem = sizeof(vec2) * icnt;
 		model->vertices = (vec3*)allocator(varticleSize);
 		model->norms = (vec3*)allocator(nSize);
-		model->uv = (vec2*)allocator(uvSize);
+		model->uv = (vec2*)allocator(uvSize_mem);
 
 		//三角形の数/
 		model->triCnt = triNum;

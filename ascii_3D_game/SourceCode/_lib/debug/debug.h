@@ -9,7 +9,11 @@ void showDebugMessage(const char* title, const char* msg);
 #define TO_STRING(X) TO_STRING_X(X)
 
 //""‚ÅˆÍ‚Ü‚ê‚½“z‚Ì‚Ý/
-#define ASSERT(x,msg) do{if(!(x)) debugMSG("assert",msg "\n\nline:" TO_STRING(__LINE__) "\n\nfile:" __FILE__);}while(0)
+#if ENABLE_DEBUG
+#define ASSERT(x,msg) do{if(!(x)) debugMSG("assert", msg "\n\nline:" TO_STRING(__LINE__) "\n\nfile:" __FILE__);}while(0)
+#else
+#define ASSERT(x,msg) do{__assume(x);}while(0)
+#endif
 //""‚ÅˆÍ‚Ü‚ê‚½“z‚Ì‚Ý/
 #define NULL_CHECK(x,msg) do{if(!(x)) debugMSG("assert",msg "\n\nline:" TO_STRING(__LINE__) "\n\nfile:" __FILE__);}while(0)
 

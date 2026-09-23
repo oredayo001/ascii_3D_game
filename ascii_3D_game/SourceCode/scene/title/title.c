@@ -58,4 +58,3 @@ SceneInitFunc titleSetFunc(Scene* scene){
 	return titleInit;
 }
 
-

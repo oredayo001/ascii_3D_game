@@ -2,6 +2,7 @@
 #include "engine/graphics/render3d.h"
 #include "engine/buffer/gameBuff.h"
 #include "common.h"
+#include <float.h>
 
 enum{
 	triType_floor,//床/
@@ -15,7 +16,7 @@ typedef struct{
 	int cnt;
 }GridData;
 
-#define GRID_DATA_ARRAY_SIZE (GRID_NUM * GRID_NUM * triType_max)
+#define GRID_DATA_ARRAY_SIZE (M_GRID_NUM * M_GRID_NUM * triType_max)
 
 typedef struct{
 	GridData gridData[GRID_DATA_ARRAY_SIZE];
@@ -44,7 +45,7 @@ static inline int getTriType(vec3 norm){
 }
 
 static inline int getGridIndex(int gx, int gz, int triType){
-	return ((gx + gz * GRID_NUM) * triType_max) + triType;
+	return ((gx + gz * M_GRID_NUM) * triType_max) + triType;
 }
 
 //----------------------------------------------------------------------
@@ -170,70 +171,87 @@ static int isHitTrisEdge(vec2 p, float len, vec2 v0, vec2 v1, vec2 v2){
 	return 0;//false
 }
 
+typedef struct{
+	float f;
+	float fu;
+	float fv;
+	vec3 sub;
+	vec3 edge1;
+	vec3 edge2;
+} MTResult;
+
+static inline void calcMTResult(vec3 p, vec3 rayV_m, const struct Triangle* tri, MTResult* r){
+	/*
+	とある場所Pから真下ベクトルDの方向にレイを飛ばすと頂点V0V1V2を持つ三角形に当たるか
+	当たる場所はP+tD　三角形は(V1-V0)=E1,(V2-V0)=E2とするとV0+uE1+vE2と表せる
+	ってことは三角形上に当たるとき P+tD=V0+uE1+vE2,0<=u,0<=v,u+v<=1ってなる
+	整理すると　P-V0 = t(-D)+uE1+vE2
+	P-V0=Sとすると t(-D) + uE1 + vE2 = S
+	つまり行列[-D E1 E2]でベクトル(t,u,v)を変換した結果がSといいかえれる(?)
+	t=det([(t,u,v) (0,1,0) (0,0,1)])　これが変換されると　det([ S E1 E2])=( S X E1)・E2
+	u=det([(1,0,0) (t,u,v) (0,0,1)])　これが変換されると　det([-D  S E2])=(-D X  S)・E2
+	v=det([(1,0,0) (0,1,0) (t,u,v)])　これが変換されると　det([-D E1  S])=(-D X E1)・ S
+	それぞれ変換率はdet([-D E1 E2])=(-D X E1)・E2だからこれをfと置くと
+	t=(1/f)(( S X E1)・E2)
+	u=(1/f)((-D X  S)・E2)
+	v=(1/f)((-D X E1)・ S)
+	これをちょっといじると使いまわせたりする
+	A=E2 X -D
+	B=-D X S
+	とすると
+	f = A・E1 ((-D X E1)・E2 = (E2 X -D)・E1 = A・E1)
+	t = (1/f)((S X E1))・E2 tは当たってるときだけだからそんな軽くする必要はない/
+	u = (1/f)(B・E2)
+	v =-(1/f)(B・E1) ( ((-D X E1)・ S) = ((S X -D)・ E1) = (-(-D X S)・ E1) = ((-B)・E1) ) = -(B・E1)
+	でも割り算はそもそも遅いから条件式
+	0<=u,0<=v,u+v<=1
+	これは
+	0<=u,0<=v,f*(u+v)<=f
+	ってできるからtを求めるまで1/fを求めるのを遅らせれる
+	*/
+	//出力ベクトル/
+	r->sub = v3sub(p, tri->v[0]);
+	//変換行列/
+	const vec3 ray_m = rayV_m;//レイの逆ベクトル つまり上ベクトル　基底その1/
+	//法線ベクトルは頂点10と20の外積　要は10の辺から見た20の辺は度のポリゴンも同じ向き(?)にある/
+	//f = det([-D E1 E2])=(-D X E1)・E2=(E1 X E2)・(-D)
+	//天井と上ベクトルを見るときE1とE2の外積は下　-Dも下　つまりfは正/
+	//床と下ベクトルを見るときはE1とE2の外積は上　-Dも上　つまりfは正/
+	r->edge1 = v3sub(tri->v[1], tri->v[0]);//辺1 基底その2/
+	r->edge2 = v3sub(tri->v[2], tri->v[0]);//辺2 基底その3/
+	//使いまわせるベクトル/
+	vec3 A = v3cross(r->edge2, ray_m);
+	vec3 B = v3cross(ray_m, r->sub);
+	//三角形のどの辺の位置になるか/
+	r->f = v3dot(A, r->edge1);
+	r->fu = v3dot(B, r->edge2);
+	r->fv = -v3dot(B, r->edge1);
+}
+static inline int isInPolygone_MT(MTResult* mt){
+	return (0.f <= mt->fu) && (0.f <= mt->fv) && ((mt->fu + mt->fv) <= mt->f);
+}
 static void _getNearestSurface(mapCollisionData* __restrict map, StaticRenderStack* __restrict polygones, vec3 p, vec3 v, fcResult* __restrict result, float checkRange, vec3 rayV_m, int triType){
 	//LOW gx gz の範囲外チェックやら/
 	int gx = getGrid(FtoINT(p.x));
 	int gz = getGrid(FtoINT(p.z));
 	GridData* grid = &(map->gridData[getGridIndex(gx, gz, triType)]);
-	float minDist = 1000.f;//!magic
+	float minDist = FLT_MAX;
 	struct Triangle* hitTri = NULL;
 	//グリッド内のポリゴンをループ/
 	for(int i = 0; i < grid->cnt; i++){
 		int triInd = grid->indices[i];
 		struct Triangle* tri = &(polygones->tri[triInd]);
-		/*
-		とある場所Pから真下ベクトルDの方向にレイを飛ばすと頂点V0V1V2を持つ三角形に当たるか
-		当たる場所はP+tD　三角形は(V1-V0)=E1,(V2-V0)=E2とするとV0+uE1+vE2と表せる
-		ってことは三角形上に当たるとき P+tD=V0+uE1+vE2,0<=u,0<=v,u+v<=1ってなる
-		整理すると　P-V0 = t(-D)+uE1+vE2
-		P-V0=Sとすると t(-D) + uE1 + vE2 = S
-		つまり行列[-D E1 E2]でベクトル(t,u,v)を変換した結果がSといいかえれる(?)
-		t=det([(t,u,v) (0,1,0) (0,0,1)])　これが変換されると　det([ S E1 E2])=( S X E1)・E2
-		u=det([(1,0,0) (t,u,v) (0,0,1)])　これが変換されると　det([-D  S E2])=(-D X  S)・E2
-		v=det([(1,0,0) (0,1,0) (t,u,v)])　これが変換されると　det([-D E1  S])=(-D X E1)・ S
-		それぞれ変換率はdet([-D E1 E2])=(-D X E1)・E2だからこれをfと置くと
-		t=(1/f)(( S X E1)・E2)
-		u=(1/f)((-D X  S)・E2)
-		v=(1/f)((-D X E1)・ S)
-		これをちょっといじると使いまわせたりする
-		A=E2 X -D
-		B=-D X S
-		とすると
-		f = A・E1 ((-D X E1)・E2 = (E2 X -D)・E1 = A・E1)
-		t = (1/f)((S X E1))・E2 tは当たってるときだけだからそんな軽くする必要はない/
-		u = (1/f)(B・E2)
-		v =-(1/f)(B・E1) ( ((-D X E1)・ S) = ((S X -D)・ E1) = (-(-D X S)・ E1) = ((-B)・E1) ) = -(B・E1)
-		でも割り算はそもそも遅いから条件式
-		0<=u,0<=v,u+v<=1
-		これは
-		0<=u,0<=v,f*(u+v)<=f
-		ってできるからtを求めるまで1/fを求めるのを遅らせれる
-		*/
-		//出力ベクトル/
-		vec3 sub = v3sub(p, tri->v[0]);
-		//変換行列/
-		const vec3 ray_m = rayV_m;//レイの逆ベクトル つまり上ベクトル　基底その1/
-		//法線ベクトルは頂点10と20の外積　要は10の辺から見た20の辺は度のポリゴンも同じ向き(?)にある/
-		//f = det([-D E1 E2])=(-D X E1)・E2=(E1 X E2)・(-D)
-		//天井と上ベクトルを見るときE1とE2の外積は下　-Dも下　つまりfは正/
-		//床と下ベクトルを見るときはE1とE2の外積は上　-Dも上　つまりfは正/
-		vec3 edge1 = v3sub(tri->v[1], tri->v[0]);//辺1 基底その2/
-		vec3 edge2 = v3sub(tri->v[2], tri->v[0]);//辺2 基底その3/
-		//使いまわせるベクトル/
-		vec3 A = v3cross(edge2, ray_m);
-		vec3 B = v3cross(ray_m, sub);
-		//三角形のどの辺の位置になるかの計算/
-		float f = v3dot(A, edge1);//返還後の拡大率の逆数/
-		float fu = v3dot(B, edge2);
-		float fv = -v3dot(B, edge1);
+
+		MTResult mt;
+		calcMTResult(p, rayV_m, tri, &mt);
 
 		//交点が三角形の間に収まってるか/
-		if((0.f <= fu) && (0.f <= fv) && ((fu + fv) <= f)){//ここは全体にfかけてたら結果が同じ/
+		if(isInPolygone_MT(&mt)){//ここは全体にfかけてたら結果が同じ/
 			//tは高さと同じ/
-			float ft = v3dot(v3cross(sub, edge1), edge2);
+			float ft = v3dot(v3cross(mt.sub, mt.edge1), mt.edge2);
 			//数字は許容範囲/
-			if(ft < -checkRange * f) continue;//!magic
-			float t = ft / f;//ここで割る/
+			if(ft < -checkRange * mt.f) continue;
+			float t = ft / mt.f;//ここで割る/
 			//最小を求める/
 			if(t < minDist){
 				minDist = t;
@@ -265,14 +283,52 @@ static void _getNearestSurface(mapCollisionData* __restrict map, StaticRenderSta
 		result->nextMinDist = t;
 	}
 }
+static int _isPolygoneBetween(mapCollisionData* __restrict map, StaticRenderStack* __restrict polygones, vec3 p1, vec3 p2, int triType){
+	vec3 rayV = v3sub(p2, p1);
+	vec3 rayV_m = v3sub(p1, p2);
+	//LOW gx gz の範囲外チェックやら/
+	int gx1 = getGrid(FtoINT(p1.x));
+	int gy1 = getGrid(FtoINT(p1.y));
+	int gx2 = getGrid(FtoINT(p2.x));
+	int gy2 = getGrid(FtoINT(p2.y));
+
+	int xMin = MIN(gx1, gx2); int xMax = MAX(gx1, gx2);
+	int yMin = MIN(gy1, gy2); int yMax = MAX(gy1, gy2);
+	//TODO ddaアルゴリズム使う/
+	for(int gx = xMin; gx <= xMax; gx++){
+		for(int gy = yMin; gy <= yMax; gy++){
+			GridData* grid = &(map->gridData[getGridIndex(gx, gy, triType)]);
+			float minDist = FLT_MAX;
+			struct Triangle* hitTri = NULL;
+			//グリッド内のポリゴンをループ/
+			for(int i = 0; i < grid->cnt; i++){
+				int triInd = grid->indices[i];
+				struct Triangle* tri = &(polygones->tri[triInd]);
+
+				MTResult mt;
+				calcMTResult(p1, rayV_m, tri, &mt);
+				if(mt.f < 0) continue;
+
+				//交点が三角形の間に収まってるか/
+				if(isInPolygone_MT(&mt)){//ここは全体にfかけてたら結果が同じ/
+					//tは高さと同じ/
+					float ft = v3dot(v3cross(mt.sub, mt.edge1), mt.edge2);
+					//後ろか/
+					if(0.f <= ft && ft < mt.f) return 1;
+				}
+			}
+		}
+	}
+	return 0;
+}
 
 static void _getNearestWall(mapCollisionData* map, StaticRenderStack* polygones, vec3 p, vec3 v, float r, float h, wallResult* result){
 	vec3 moved = v3add(p, v);//次の位置/
 
 	int mingx = MAX(getGrid(FtoINT(moved.x - r)), 0);
 	int mingz = MAX(getGrid(FtoINT(moved.z - r)), 0);
-	int maxgx = MIN(getGrid(FtoINT(moved.x + r)), GRID_NUM - 1);
-	int maxgz = MIN(getGrid(FtoINT(moved.z + r)), GRID_NUM - 1);
+	int maxgx = MIN(getGrid(FtoINT(moved.x + r)), M_GRID_NUM - 1);
+	int maxgz = MIN(getGrid(FtoINT(moved.z + r)), M_GRID_NUM - 1);
 
 	float minDistAbs = 10000.f;
 	int isHit = 0;
@@ -282,7 +338,6 @@ static void _getNearestWall(mapCollisionData* map, StaticRenderStack* polygones,
 	for(int gx = mingx; gx <= maxgx; gx++){
 		for(int gz = mingz; gz <= maxgz; gz++){
 			GridData* grid = &(map->gridData[getGridIndex(gx, gz, triType_wall)]);
-
 
 			//一旦速度が速いときのは無視の簡易的な xzは基本高速には動かんと仮定した奴/
 			for(int i = 0; i < grid->cnt; i++){
@@ -384,7 +439,7 @@ void createMap(){
 	createMapCollisionData(&(m.mapData), m.worldModel);
 }
 
-void renderMap(RenderContext* rCtx){
+void renderMap(){
 	NULL_CHECK(m.worldModel, "worldModelがぬるぽ");
 	pushStaticRenderStack(m.worldModel);
 	//renderStaticRenderStack(m.worldModel, rCtx);
@@ -407,5 +462,3 @@ void getNearestCeilingDist(vec3 p, vec3 v, float checkRange, fcResult* result){
 void getNearestWall(vec3 p, vec3 v, float r, float h, wallResult* result){
 	_getNearestWall(&(m.mapData), m.worldModel, p, v, r, h, result);
 }
-
-

@@ -5,8 +5,7 @@
 #include "engine/buffer/gameBuff.h"
 
 //objcts
-#include "obj/player.h"
-#include "obj/dummy_character.h"
+#include "obj/_objects.h"
 
 //######################################################################
 // DEBUG
@@ -20,7 +19,7 @@
 #define _ENABLE_DEBUG (ENABLE_DEBUG&&_ENABLE_DEBUG_X)
 
 //ランダムなタイミングでダミーのオブジェクトの生成破壊を繰り返すモード/
-#define _ENABLE_DEBUG_INST_CHURN_X 1
+#define _ENABLE_DEBUG_INST_CHURN_X 0
 #define _ENABLE_DEBUG_INST_CHURN (_ENABLE_DEBUG&&_ENABLE_DEBUG_INST_CHURN_X)
 
 //######################################################################
@@ -58,7 +57,6 @@ static struct{
 }objAllocator;//オブジェクト管理者がオブジェクトに与えるメモリを管理するやつ/
 
 // --- アロケーター自体の管理をする奴ら ---
-
 //作成/
 static void initAllocator(){
 #if UNUSE_MY_ALLOCATOR
@@ -386,6 +384,8 @@ static void _destroyInstances(){
 	//まあ初期化は要らんやろ/
 }
 
+// --- 誰からでも呼び出せるやつ(?) --- /
+
 //初期化関数ポインタの型/
 typedef objInitOut(*initFunc)(objBase*);
 static objBase* spawnObj(initFunc initializer, size_t size, uint32_t attribute, vec3 p){
@@ -413,6 +413,47 @@ static objBase* spawnObj(initFunc initializer, size_t size, uint32_t attribute, 
 
 	return r;
 }
+
+
+#define SERCH_FROM_ID(inst, id) ((inst)->objID == id)
+#define GET_NEAREST_INST_FUNC_TEMP(funcName,argType,arg,checkFunc)	\
+static InstPtr funcName(vec3 p, argType arg){						\
+	float minDist = FLT_MAX;										\
+	objBase* r = NULL;												\
+	for(int i = 0; i < m.cnt; i++){									\
+		objBase* inst = m.instances[i];								\
+		if(checkFunc(inst, arg)){									\
+			float dist = v3lensq(v3sub(inst->render->p, p));		\
+			if(dist < minDist){										\
+				minDist = dist;										\
+				r = inst;											\
+			}														\
+		}															\
+	}																\
+	return makeInstPtr(r);											\
+}//////////////////////////////////////////////////////////////////
+
+GET_NEAREST_INST_FUNC_TEMP(_getNearestInst_id,int,objID, SERCH_FROM_ID)
+GET_NEAREST_INST_FUNC_TEMP(_getNearestInst_anyAtt,uint64_t,targetAttribute, hasAttribute_any)
+GET_NEAREST_INST_FUNC_TEMP(_getNearestInst_allAtt,uint64_t,targetAttribute, hasAttribute_all)
+
+//外から呼び出される/
+//numが負の数なら全員取得/
+#define SEARCH_INSTANCE_FUNC_TEMP(funcName,argType,argName,checkFunc)\
+static int funcName(argType argName, InstPtr* dist, int num){		 \
+	int cnt = 0;													 \
+	for(int i = 0; i < m.cnt; i++){									 \
+		if(checkFunc(m.instances[i], argName)){						 \
+			dist[cnt] = makeInstPtr(m.instances[i]);				 \
+			if(++cnt == num){ return cnt;}							 \
+		}															 \
+	}																 \
+	return cnt;														 \
+}///////////////////////////////////////////////////////////////////
+SEARCH_INSTANCE_FUNC_TEMP(_getInstFromID, int, objID, SERCH_FROM_ID)//objIDを持つキャラの配列を取得/
+SEARCH_INSTANCE_FUNC_TEMP(_getInstHasAttribute_any, uint64_t, targetAttribute, hasAttribute_any)//属性を持つキャラを取得/
+SEARCH_INSTANCE_FUNC_TEMP(_getInstHasAttribute_all, uint64_t, targetAttribute, hasAttribute_all)//属性をすべて持つキャラを取得/
+
 
 //######################################################################
 // public:
@@ -459,6 +500,25 @@ objBase* instanceCreate(uint16_t objID, vec3 p){
 	objBase* r = spawnObj(objInitializeFuncTable[objID], objSizeTable[objID], objAttributeTable[objID], p);
 	r->objID = objID;
 	return r;
+}
+
+int getInstFromID(int id, InstPtr* dist, int num){
+	return _getInstFromID(id, dist, num);
+}
+int getInstHasAttribute_all(uint64_t targetAttribute, InstPtr* dist, int num){
+	return _getInstHasAttribute_all(targetAttribute, dist, num);
+}
+int getInstHasAttribute_any(uint64_t targetAttribute, InstPtr* dist, int num){
+	return _getInstHasAttribute_any(targetAttribute, dist, num);
+}
+InstPtr getNearestInst_id(vec3 p, int id){
+	return _getNearestInst_id(p, id);
+}
+InstPtr getNearestInst_allAtt(vec3 p, uint64_t targetAttribute){
+	return _getNearestInst_allAtt(p, targetAttribute);
+}
+InstPtr getNearestInst_anyAtt(vec3 p, uint64_t targetAttribute){
+	return _getNearestInst_anyAtt(p, targetAttribute);
 }
 
 /*

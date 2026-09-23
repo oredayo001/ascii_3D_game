@@ -6,4 +6,3 @@
 
 
 SceneInitFunc titleSetFunc(Scene*);
-

@@ -92,6 +92,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)SourceCode/_lib;$(ProjectDir)SourceCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <SuppressStartupBanner>false</SuppressStartupBanner>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -111,6 +112,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <AdditionalOptions>/w14710 /Qvec-report:2 %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -126,6 +128,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)SourceCode/_lib;$(ProjectDir)SourceCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <SuppressStartupBanner>false</SuppressStartupBanner>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,6 +148,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
       <AdditionalOptions>/w14710 /Qvec-report:2 %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -156,11 +160,13 @@
     <ClCompile Include="SourceCode\engine\fileio\fileio.c" />
     <ClCompile Include="SourceCode\engine\graphics\loader\modelLoader.c" />
     <ClCompile Include="SourceCode\engine\graphics\loader\textureLoader.c" />
+    <ClCompile Include="SourceCode\engine\thread\thread.c" />
     <ClCompile Include="SourceCode\scene\commonManager\gameModelLoader.c" />
     <ClCompile Include="SourceCode\scene\game\manager\cameraControler\cameraManager.c" />
     <ClCompile Include="SourceCode\scene\commonManager\input.c" />
     <ClCompile Include="SourceCode\scene\game\manager\map\mapManager.c" />
     <ClCompile Include="SourceCode\scene\game\manager\obj\objManager.c" />
+    <ClCompile Include="SourceCode\scene\game\manager\obj\obj\chaser.c" />
     <ClCompile Include="SourceCode\scene\game\manager\obj\obj\dummy_character.c" />
     <ClCompile Include="SourceCode\scene\game\manager\obj\obj\player.c" />
     <ClCompile Include="SourceCode\_lib\control\control.c" />
@@ -184,14 +190,17 @@
     <ClInclude Include="SourceCode\engine\graphics\rasterize_template.h" />
     <ClInclude Include="backup\rasterize_template_halfSpace.txt" />
     <ClInclude Include="SourceCode\engine\graphics\render3d_simd.h" />
+    <ClInclude Include="SourceCode\engine\thread\thread.h" />
     <ClInclude Include="SourceCode\scene\commonManager\gameModelLoader.h" />
     <ClInclude Include="SourceCode\scene\game\manager\cameraControler\cameraManager.h" />
     <ClInclude Include="SourceCode\scene\game\manager\map\mapManager.h" />
     <ClInclude Include="SourceCode\scene\game\manager\obj\objDef.h" />
     <ClInclude Include="SourceCode\scene\game\manager\obj\objManager.h" />
     <ClInclude Include="SourceCode\scene\commonManager\input.h" />
+    <ClInclude Include="SourceCode\scene\game\manager\obj\obj\chaser.h" />
     <ClInclude Include="SourceCode\scene\game\manager\obj\obj\dummy_character.h" />
     <ClInclude Include="SourceCode\scene\game\manager\obj\obj\player.h" />
+    <ClInclude Include="SourceCode\scene\game\manager\obj\obj\_objects.h" />
     <ClInclude Include="SourceCode\_lib\allocator\allocator.h" />
     <ClInclude Include="SourceCode\_lib\control\control.h" />
     <ClInclude Include="SourceCode\_lib\debug\debug.h" />

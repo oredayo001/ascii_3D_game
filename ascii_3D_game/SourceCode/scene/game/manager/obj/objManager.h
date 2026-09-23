@@ -3,7 +3,6 @@
 #include"common.h"
 #include"objDef.h"
 
-
 // --- 管理者が呼ぶ --- /
 
 //初期化/
@@ -21,11 +20,13 @@ void finInstances();
 //一区切りついたときに呼ぶ/
 void destroyInstances();
 
-
 // --- 誰でも呼べる --- /
 
 //作成 objID:id_obj.../
 objBase* instanceCreate(uint16_t objID, vec3 p);
+
+static inline int hasAttribute_any(objBase* inst, uint64_t att){ return !!(inst->attribute & att); }
+static inline int hasAttribute_all(objBase* inst, uint64_t att){ return (inst->attribute & att) == att; }
 
 static inline void instanceDestroy(objBase* inst){
 	inst->isActive = 0;
@@ -51,6 +52,7 @@ struct{\
 #define DEF_REAL_INST_PTR(T) typedef REAL_INST_PTR_STRUCT T
 
 //キャラのポインタを2f以上保持しておきたいときに使うやつ/
+//NULL可能/
 static inline InstPtr makeInstPtr(objBase* target){
 	DEF_REAL_INST_PTR(real_instPtr);
 
@@ -59,7 +61,8 @@ static inline InstPtr makeInstPtr(objBase* target){
 
 	InstPtr r = { 0 };
 	real_instPtr* real = (real_instPtr*)&r;
-	if(target != NULL){//何かしらはさしてる/
+	if(target != NULL){
+		//何かしらはさしてる/
 		real->p.ptr = target;
 		real->p.generation = target->generation;
 	}
@@ -89,3 +92,17 @@ static inline objBase* getInstPtr(const InstPtr* _ref){
 //ほかで使われたら困るから消す/
 #undef DEF_REAL_INST_PTR
 #undef REAL_INST_PTR_STRUCT
+
+#define SEARCH_ALL_INST -1
+//インスタンスを探すidから探す 全インスタンスを探す場合SEARCH_ALL_INST/
+int getInstFromID(int id, InstPtr* dist, int num);
+//インスタンスを探す属性から探す 全インスタンスを探す場合SEARCH_ALL_INST/
+int getInstHasAttribute_all(uint64_t targetAttribute, InstPtr* dist, int num);
+//インスタンスを探す属性から探す 全インスタンスを探す場合SEARCH_ALL_INST/
+int getInstHasAttribute_any(uint64_t targetAttribute, InstPtr* dist, int num);
+//一番近いインスタンスをidから探す/
+InstPtr getNearestInst_id(vec3 p, int id);
+//一番近いインスタンスを属性から探す/
+InstPtr getNearestInst_allAtt(vec3 p, uint64_t targetAttribute);
+//一番近いインスタンスを属性から探す/
+InstPtr getNearestInst_anyAtt(vec3 p, uint64_t targetAttribute);

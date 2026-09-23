@@ -1,8 +1,11 @@
 #include "engine.h"
 #include "common.h"
+
+//engine
+#include "buffer/gameBuff.h"
 #include "screen/screen.h"
 #include "graphics/render3d.h"
-#include "buffer/gameBuff.h"
+#include "thread/thread.h"
 
 //---------------------------------------------
 // private:
@@ -49,6 +52,10 @@ void engineInit(SceneSetFunc firstSceneFunc){
 	//ƒƒ‚ƒŠ‚Ì€”õ/
 	gm_d_pushStack();
 	m.memolyMarker = gm_getMarker();
+	//ƒXƒŒƒbƒh‚ÌÝ’è/
+#if USE_THREAD
+	threadInitialize(THREAD_NUM, THREAD_STACK_SIZE);
+#endif
 	//‰ŠúÝ’è/
 	m.currentScene = SceneNone;
 	m.isRunning = 1;
@@ -88,6 +95,9 @@ void engineRender(){
 }
 
 void engineFin(){
+#if USE_THREAD
+	threadDestroy();
+#endif
 	m.currentScene.fin();
 	//destroyScreen(&(systemContext.rCtx->sc));
 	//cameraDestroy(&(systemContext.rCtx->c));

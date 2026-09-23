@@ -8,6 +8,8 @@
 #error
 #endif
 
+
+
 //0:sl 1:hs 2:switch
 #define RASTERIZE_TYPE_X 1
 #define RASTERIZE_TYPE (RASTERIZE_TYPE_X&&ENABLE_SIMD)
@@ -21,18 +23,17 @@
 #error//widthがSIMD_ALIGNの倍数じゃない loadで死ぬ(loaduにしてない)
 #endif
 //ハーフスペース/
-static void FUNC_NAME(rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __restrict sp, vec2* __restrict uv, FaceContext* __restrict fCtx){
-
-	// --- aabb --- /
-	int xMin = MAX((int)(MIN3(sp[0].x, sp[1].x, sp[2].x)), 0);
-	int xMax = MIN((int)(MAX3(sp[0].x, sp[1].x, sp[2].x)), (WIDTH - 1));
-	int yMin = MAX((int)(MIN3(sp[0].y, sp[1].y, sp[2].y)), 0);
-	int yMax = MIN((int)(MAX3(sp[0].y, sp[1].y, sp[2].y)), (HEIGHT - 1));
-	if((xMax < xMin) || (yMax < yMin)) return;//画面外/
-	// --- ループの開始終了場所 --- /
-	int s_x = xMin & ALIGN_MASK;
-	int e_x = (xMax + (SIMD_STEP - 1)) & ALIGN_MASK;
-
+typedef struct halfSpaceArgs{
+	int yMin;
+	int yMax;
+	int s_x;
+	int e_x;
+}halfSpaceArgs;
+static void FUNC_NAME(_rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __restrict sp, vec2* __restrict uv, FaceContext* __restrict fCtx, halfSpaceArgs* hsArg){
+	int yMin = hsArg->yMin;
+	int yMax = hsArg->yMax;
+	int s_x = hsArg->s_x;
+	int e_x = hsArg->e_x;
 	//なんか使うやつ/
 	v_float v_zero = simd_setzero_ps();
 	v_float v_one = simd_set1_ps(1.f);
@@ -71,7 +72,7 @@ static void FUNC_NAME(rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __res
 		//}
 	//}
 	//else fCtx->debug___ = 100;
-	
+
 	// ---- debug end ---- /
 
 	//fと1/f
@@ -121,6 +122,7 @@ static void FUNC_NAME(rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __res
 
 			// --- zbuff --- /
 			//アライメント済み/
+			//ASSERT(!((uint64_t)(sc->zbuff) & 0x3f), "非アライメント");
 			v_float v_invz_old = simd_load_ps(zb);
 			//rz0+sz1+tz2
 			v_float v_invz_new = simd_add_ps(simd_add_ps(simd_mul_ps(v_r, v_invz0), simd_mul_ps(v_s, v_invz1)), simd_mul_ps(v_t, v_invz2));
@@ -166,7 +168,104 @@ static void FUNC_NAME(rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __res
 		v_t_line = simd_add_ps(v_t_line, v_dy_t);
 	}
 }
+#if ENABLE_THREAD
+typedef struct threadRasterizeArg{
+	int tID;
+	Screen* __restrict sc;
+	vec3 sp[3];
+	vec2 uv[3];
+	FaceContext fCtx;
+	halfSpaceArgs arg;
+}threadRasterizeArg;
+//スレッド使う版/
+static inline threadRasterizeArg* threadHeapAllocate(int threadID){
+	threadRasterizeArg* r;
+	if(threadHeapList[threadID] == NULL){
+		//リニアアロケータ 後ろから/
+		r = gm_allocate_back(sizeof(threadRasterizeArg));
+	}
+	else{
+		r = (threadRasterizeArg*)(threadHeapList[threadID]);
+		threadHeapList[threadID] = threadHeapList[threadID]->next;
+	}
+	return r;
+}
+static inline void threadHeapFree(ThreadHeapList* p,int threadID){
+	p->next = threadHeapList[threadID];//書き込み可能なエリアに今保存されてる場所を記入/
+	threadHeapList[threadID] = p;//書き込み可能なエリアのポインタを入れる/
+}
+static void FUNC_NAME(rasterizeTri_halfSpace_helper)(void* _arg){
+	threadRasterizeArg* arg = (threadRasterizeArg*)_arg;
+	FUNC_NAME(_rasterizeTri_halfSpace)(arg->sc, arg->sp, arg->uv, &(arg->fCtx), &(arg->arg));
+	//threadHeapFree((ThreadHeapList*)arg, arg->tID);
+}
 
+#define SC_TILE_SIZE 16 
+#define SC_TILE_SIZE_L2 (4)
+#define SC_TILE_NUM_W (WIDTH/SC_TILE_SIZE)
+static_assert(!(WIDTH& (SC_TILE_SIZE_L2 - 1)), "width is not baisuu of 16");//日本語交じりの英語/
+static void FUNC_NAME(rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __restrict sp, vec2* __restrict uv, FaceContext* __restrict fCtx){
+
+	// --- aabb --- /
+	int xMin = MAX((int)(MIN3(sp[0].x, sp[1].x, sp[2].x)), 0);
+	int xMax = MIN((int)(MAX3(sp[0].x, sp[1].x, sp[2].x)), (WIDTH - 1));
+	int yMin = MAX((int)(MIN3(sp[0].y, sp[1].y, sp[2].y)), 0);
+	int yMax = MIN((int)(MAX3(sp[0].y, sp[1].y, sp[2].y)), (HEIGHT - 1));
+	if((xMax < xMin) || (yMax < yMin)) return;//画面外/
+
+	int s_x = xMin & ALIGN_MASK;
+	int e_x = (xMax + (SIMD_STEP - 1)) & ALIGN_MASK;
+
+	int txMin = (xMin >> SC_TILE_SIZE_L2);
+	int txMax = (xMax >> SC_TILE_SIZE_L2);
+	int tyMin = (yMin >> SC_TILE_SIZE_L2);
+	int tyMax = (yMax >> SC_TILE_SIZE_L2);
+	for(int tx = txMin; tx <= txMax; tx++){
+		for(int ty = tyMin; ty <= tyMax; ty++){
+			int left = tx * SC_TILE_SIZE;
+			int right = (tx + 1) * SC_TILE_SIZE;
+			int top = ty * SC_TILE_SIZE;
+			int bottom = (ty + 1) * SC_TILE_SIZE;
+			halfSpaceArgs arg = {
+				.yMin = MAX(yMin,top),
+				.yMax = MIN(yMax,bottom),
+				.s_x = MAX(s_x,left),
+				.e_x = MIN(e_x,right),
+			};
+			int threadIndex = (tx + (ty * SC_TILE_NUM_W)) % THREAD_NUM;
+			//後ろから割り当て可能/
+			//threadRasterizeArg* tArg = threadHeapAllocate(threadIndex);//メインと子とで同じメモリを読み書きしてるから一旦やめる/
+			threadRasterizeArg* tArg = gm_allocate_back(sizeof(threadRasterizeArg));//一旦こっち/
+			*tArg = (threadRasterizeArg){
+				.tID = threadIndex,
+				.sc = sc,
+				.fCtx = *fCtx,
+				.arg = arg
+			};
+			memcpy(tArg->sp, sp, sizeof(vec3) * 3);
+			memcpy(tArg->uv, uv, sizeof(vec2) * 3);
+			threadSetJob(threadIndex, FUNC_NAME(rasterizeTri_halfSpace_helper), tArg);
+		}
+	}
+}
+#else
+//スレッドを使わない版/
+static void FUNC_NAME(rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __restrict sp, vec2* __restrict uv, FaceContext* __restrict fCtx){
+	halfSpaceArgs arg;
+	// --- aabb --- /
+	int xMin = MAX((int)(MIN3(sp[0].x, sp[1].x, sp[2].x)), 0);
+	int xMax = MIN((int)(MAX3(sp[0].x, sp[1].x, sp[2].x)), (WIDTH - 1));
+	arg.yMin = MAX((int)(MIN3(sp[0].y, sp[1].y, sp[2].y)), 0);
+	arg.yMax = MIN((int)(MAX3(sp[0].y, sp[1].y, sp[2].y)), (HEIGHT - 1));
+	if((xMax < xMin) || (arg.yMax < arg.yMin)) return;//画面外/
+	// --- ループの開始終了場所 --- /
+	arg.s_x = xMin & ALIGN_MASK;
+	arg.e_x = (xMax + (SIMD_STEP - 1)) & ALIGN_MASK;
+
+	FUNC_NAME(_rasterizeTri_halfSpace)(sc, sp, uv, fCtx, &arg);
+}
+
+#endif
 //なんかこの辺スネークケース多いな/
 
 //多分テクスチャとスクリーンを1byte型じゃなくて4byte型使えばちょっと早くなる可能性　まあめんどいからやらんけど/

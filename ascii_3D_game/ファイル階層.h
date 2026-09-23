@@ -27,7 +27,11 @@ SourceCode
 	|	|-screen
 	|	|	|-screen.h
 	|	|	
+	|	|-buffer
+	|	|	|-buffer.h
+	|	|	
 	|	|-engine.h
+	|	|-engineTypes.h
 	|	
 	|-scene
 	|	|-game
@@ -38,7 +42,9 @@ SourceCode
 	|	|		|	
 	|	|		|-obj
 	|	|		|	|-obj
+	|	|		|	|	|-objects.h
 	|	|		|	|	|-player.h
+	|	|		|	|	|-...
 	|	|		|	|	
 	|	|		|	|-objManager.h
 	|	|		|	|-objDef.h

@@ -5,10 +5,11 @@
 #define WORLD_SIZE 16384
 #define POS_MAX (WORLD_SIZE/2)
 #define POS_MIN (-POS_MAX)
-#define GRID_NUM 16
+#define M_GRID_NUM 16
+#define M_GRID_SIZE (WORLD_SIZE/M_GRID_NUM)
 
 static inline int getGrid(int x){
-	return ((x + POS_MAX) * GRID_NUM) / WORLD_SIZE;
+	return ((x + POS_MAX) * M_GRID_NUM) / WORLD_SIZE;
 }
 
 struct RenderContext;
@@ -17,7 +18,7 @@ typedef struct RenderContext RenderContext;
 //pushModelしたモデルをマップとして初期化する/
 void createMap();
 //マップを描画/
-void renderMap(RenderContext* rCtx);
+void renderMap();
 //マップを開放/
 void destroyMap();
 
@@ -33,8 +34,8 @@ typedef struct{
 
 typedef struct{
 	int isHit;
-	float force;      
-	struct Triangle* tri;             
+	float force;
+	struct Triangle* tri;
 	vec3 norm;
 }wallResult;
 

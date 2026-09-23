@@ -119,6 +119,7 @@ X(名前,型名,属性ビットマスク)\
 名前は重複不可　型は重複可*/\
 X(player, objPlayer, objAtt_player | objAtt_playable)\
 X(dummy_debug, objDummy_debug, 0)\
+X(chaser, objChaser, objAtt_enemy)\
 X_MACRO_END
 
 //前方宣言 まあ全オブジェクトを一括で前方宣言する　オブジェクトはstruct obj...って定義するようにするとobjListに追加するの忘れてたらコンパイルエラーになってくれるからミスに気づきやすい/

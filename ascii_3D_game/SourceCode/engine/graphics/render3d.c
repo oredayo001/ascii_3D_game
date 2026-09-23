@@ -1,12 +1,18 @@
 #include"render3d.h"
 #include<stdint.h>
-#include"../screen/screen.h"
+#include "../screen/screen.h"
 #include "../buffer/gameBuff.h"
+#include "../thread/thread.h"
 #include "loader/textureLoader.h"
 #include<intrin.h>
 
 //なんとなくでやってみたけど結構早かった　simdってすごいんやな/
 #define ENABLE_SIMD 1
+//スレッドを有効にするか　まあバグだらけ/
+#define ENABLE_THREAD_X 0
+//スレッドが有効かつsimdが有効/
+#define ENABLE_THREAD (ENABLE_THREAD_X&&USE_THREAD&&ENABLE_SIMD)
+
 
 //128 or 256 思ったよりそこまで速度は変わらない/
 //128:600-800fps 256:600-900fps まあ大体このあたりかな(release 512x256px 800ポリゴン くらいの)/
@@ -113,6 +119,13 @@ typedef struct SRS_stack{//static render stack の stack
 	const StaticRenderStack* placedMdls[SRS_STACK_SIZE];
 }SRS_stack;
 SRS_stack srsStack;
+
+#if USE_THREAD
+typedef struct ThreadHeapList{
+	struct ThreadHeapList* next;
+}ThreadHeapList;
+static ThreadHeapList* threadHeapList[THREAD_NUM] = {0};
+#endif
 
 //こいつが変わればsimd番も変わる　変わらないことを祈る...
 static inline pixel_t getAsciiShade(vec2 uv, float invz, FaceContext* fCtx){
@@ -879,8 +892,19 @@ void renderContextDestroy(RenderContext** ctx){
 }
 
 void renderStackAll(RenderContext* ctx){
+#if USE_THREAD
+	int marker = gm_getMarker_back();
+	prepareThreads();
+	//memset(threadHeapList, 0, sizeof(ThreadHeapList) * THREAD_NUM);
+#endif
 	_renderStackAll(&rStack, ctx->sc, ctx->c);
 	_renderAllStaticRenderStack(&srsStack, ctx);
+#if USE_THREAD
+	sleepThreads();
+	wateForThreads();
+	gm_free_back_to_marker(marker);
+	//memset(threadHeapList, 0, sizeof(ThreadHeapList) * THREAD_NUM);
+#endif
 }
 
 StaticRenderStack* createStaticRenderStack(){
