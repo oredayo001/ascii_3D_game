@@ -17,6 +17,7 @@ typedef struct{
 	} *tri;//‚¿‚á‚ñ‚ÆŠÇ—‚³‚ê‚Ä‚é/
 	vec2* uv;
 	mdlTextureRLE* texInfo;
+	bbox_t bbox;
 } StaticRenderStack;
 
 
@@ -100,3 +101,6 @@ void pushStaticRenderStack(const StaticRenderStack* srs);
 
 // --- shading --- /
 void shadingScreen(Screen* sc);//zbuff‚ğ‚à‚Æ‚É‰“‚­‚És‚­‚Ù‚ÇˆÃ‚­‚·‚é/
+
+// --- line --- /
+void drawLine3D(RenderContext* sc, vec3 p1, vec3 p2);

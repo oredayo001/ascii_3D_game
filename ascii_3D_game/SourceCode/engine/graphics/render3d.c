@@ -1,10 +1,10 @@
-#include"render3d.h"
-#include<stdint.h>
+#include "render3d.h"
+#include <stdint.h>
 #include "../screen/screen.h"
 #include "../buffer/gameBuff.h"
 #include "../thread/thread.h"
 #include "loader/textureLoader.h"
-#include<intrin.h>
+#include <intrin.h>
 
 //なんとなくでやってみたけど結構早かった　simdってすごいんやな/
 #define ENABLE_SIMD 1
@@ -12,7 +12,6 @@
 #define ENABLE_THREAD_X 0
 //スレッドが有効かつsimdが有効/
 #define ENABLE_THREAD (ENABLE_THREAD_X&&USE_THREAD&&ENABLE_SIMD)
-
 
 //128 or 256 思ったよりそこまで速度は変わらない/
 //128:600-800fps 256:600-900fps まあ大体このあたりかな(release 512x256px 800ポリゴン くらいの)/
@@ -43,10 +42,12 @@
 #define far 5000.f
 
 //ワイヤーの最大描画距離/
-#define WIRE_MAX_FAR 200.f
+//#define WIRE_MAX_FAR 200.f
+#define WIRE_MAX_FAR 20000.f
 #define WIRE_MAX_INV_FAR (1.f/WIRE_MAX_FAR)
 //明るさが半減する距離/
-const float shadeLength = ((WIRE_MAX_FAR / 5.f) * 2.f);
+//const float shadeLength = ((WIRE_MAX_FAR / 5.f) * 2.f);
+const float shadeLength = ((200 / 5.f) * 2.f);
 
 //小さい方/
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -124,7 +125,7 @@ SRS_stack srsStack;
 typedef struct ThreadHeapList{
 	struct ThreadHeapList* next;
 }ThreadHeapList;
-static ThreadHeapList* threadHeapList[THREAD_NUM] = {0};
+static ThreadHeapList* threadHeapList[THREAD_NUM] = { 0 };
 #endif
 
 //こいつが変わればsimd番も変わる　変わらないことを祈る...
@@ -147,15 +148,55 @@ static inline pixel_t getAsciiShade(vec2 uv, float invz, FaceContext* fCtx){
 	//return asciiShade_0 + !!((u & 8) ^ (v & 8))*31;
 }
 
-static inline v_int getAsciiShade_simd(v_float v_u, v_float v_v, v_float v_invz, FaceContext* fCtx){
+#if ENABLE_SIMD
+static inline v_int getAsciiShade_simd(v_float v_u, v_float v_v, v_float v_invz, v_float v_x, v_float v_y, FaceContext* fCtx){
 	_ASSERT(((fCtx->txSize) & (fCtx->txSize - 1)) == 0, "テクスチャが2の累乗じゃない");
-	//光の減衰/
+
+	// --- ノイズ --- /
+	v_int v_magic = simd_set1_epi32(0x9e3779b9);//なんかマジックナンバー/
+	v_int v_x_i = simd_cvttps_epi32(v_x);
+	v_int v_y_i = simd_cvttps_epi32(v_y);
+	v_int v_hash_i = simd_xor_si(simd_mullo_epi32(v_x_i, v_magic), simd_mullo_epi32(v_y_i, v_magic));
+
+	const int exponentMask = 0x3F800000;//指数部8bitのうち7bit/
+	const int significandMask = 0x007FFFFF;//仮数部23bit/
+	v_float v_rand_bits = simd_or_ps(simd_and_ps(simd_castsi_ps(v_hash_i), simd_castsi_ps(simd_set1_epi32(significandMask))), simd_castsi_ps(simd_set1_epi32(exponentMask)));
+	//↑符号と指数部上位1bitを無視して指数部を0-127までにする　バイアスが127だから指数の最大値は0 つまり仮数*2^0 仮数は1.0~1.99...
+	//つまり1~2までの乱数/
+	//1~2の乱数を1.5で引くと-.5f~.5fになる/
+	v_float v_rand = simd_sub_ps(v_rand_bits, simd_set1_ps(1.5f));//-.5f~.5f
+
+	// --- 光の減衰 --- /
 	v_float v_shadeLength = simd_set1_ps(fCtx->shadeLength);
 	v_float _v_lightFalloff = simd_mul_ps(v_invz, v_shadeLength);
 	v_float v_lightFalloff_max = simd_set1_ps(1.f);
 	v_float v_mask = simd_cmplt_ps(_v_lightFalloff, v_lightFalloff_max);//((第一)<(第二))?-1:0
 	v_float v_lightFalloff = simd_blendv_ps(v_lightFalloff_max/*false*/, _v_lightFalloff/*true*/, v_mask);
 	v_int v_txsize_i = simd_set1_epi32(fCtx->txSize);
+
+	// --- 円形のやつ --- /
+	v_float v_mid_x = simd_set1_ps(WIDTH / 2);//中心/
+	v_float v_mid_y = simd_set1_ps(HEIGHT / 2);
+	v_float v_dist_x = simd_sub_ps(v_x, v_mid_x);
+	v_float v_dist_y = simd_sub_ps(v_y, v_mid_y);
+
+	v_float v_distSq = simd_add_ps(simd_mul_ps(v_dist_x, v_dist_x), simd_mul_ps(v_dist_y, v_dist_y));//三平方/
+
+
+#define MAX_DIST_SQ ((float)((WIDTH * WIDTH) + (HEIGHT * HEIGHT)))
+	const float darkDist = .5f;//!magic
+	v_float v_d = simd_div_ps(v_distSq, simd_set1_ps(MAX_DIST_SQ * darkDist));//後でここにカメラの値をかける/
+#undef MAX_DIST_SQ
+	v_float v_one = simd_set1_ps(1.f);
+	v_float v_mask_dist = simd_cmplt_ps(v_d, v_one);//((第一)<(第二))?-1:0
+	v_d = simd_blendv_ps(v_one/*false*/, v_d/*true*/, v_mask_dist);
+	const float noise_scaleDist = .2f;
+	v_d = simd_add_ps(v_d, simd_mul_ps(v_rand, simd_set1_ps(noise_scaleDist)));
+	const float strong = .5f;//!magic
+	//(d^2)*(2-(d^2))
+	v_float v_darknessPalam = simd_mul_ps(v_d, simd_sub_ps(simd_set1_ps(2.f), v_d));
+	//1-(v_darknessPalam)*強さ/
+	v_float v_darkness = simd_sub_ps(v_one, simd_mul_ps(v_darknessPalam, simd_set1_ps(strong)));
 
 	//context/
 	v_float v_light = simd_set1_ps(fCtx->light);
@@ -213,6 +254,11 @@ static inline v_int getAsciiShade_simd(v_float v_u, v_float v_v, v_float v_invz,
 	//光のやつ/
 	v_c_f = simd_mul_ps(v_c_f, v_light);
 	v_c_f = simd_mul_ps(v_c_f, v_lightFalloff);
+	v_c_f = simd_mul_ps(v_c_f, v_darkness);
+
+	//ノイズ/
+	const float noise_scale = 1.0f / 32.0f;
+	v_c_f = simd_add_ps(v_c_f, simd_mul_ps(v_rand, simd_set1_ps(noise_scale)));
 
 	//int
 	v_c = simd_cvttps_epi32(v_c_f);//32bitに戻す/
@@ -232,6 +278,7 @@ static inline v_int getAsciiShade_simd(v_float v_u, v_float v_v, v_float v_invz,
 
 	return v_c;
 }
+#endif
 
 //ドット書き込み/
 static inline void putDot(Screen* sc, int x, int y, pixel_t l){
@@ -670,6 +717,12 @@ static StaticRenderStack* _createStaticRenderStack(RenderStack* st){
 	r->triCnt = totalTri;
 	mdlTextureRLE* texInfoDist = r->texInfo;
 
+	//bbox
+	bbox_t newBbox = (bbox_t){
+		.max = v3max,
+		.min = v3min
+	};
+
 	totalTri = 0;
 	for(int m = 0; m < st->cnt; m++){
 		const Model3D* mdl = st->mdl[m];
@@ -687,10 +740,13 @@ static StaticRenderStack* _createStaticRenderStack(RenderStack* st){
 		int triCnt = mdl->triCnt;
 		memcpy(&uv[totalTri * 3], mdl->uv, sizeof(vec2) * triCnt * 3);
 
-
 		mdlTextureRLE* currentTexInfo = (mdl->txInfo);
 		mdlTextureRLE currentTex = *currentTexInfo;
 		*(texInfoDist++) = currentTex;//書き込み/
+
+		//bbox
+		newBbox.min = v3getMin(newBbox.min, mdl->bbox.min);
+		newBbox.max = v3getMax(newBbox.max, mdl->bbox.max);
 
 		//描画/
 		for(int t = 0; t < triCnt; t++){//三角形/
@@ -720,6 +776,7 @@ static StaticRenderStack* _createStaticRenderStack(RenderStack* st){
 			currentTex.cnt--;
 		}
 	}
+	r->bbox = newBbox;
 	//テクスチャのサイズの確定/
 	size_t texMemSize = sizeof(mdlTextureRLE) * ((size_t)(texInfoDist - r->texInfo));
 	gm_increment(texMemSize);
@@ -769,7 +826,7 @@ static void _renderStaticRenderStack(const StaticRenderStack* __restrict st, Scr
 		}
 
 		//描画/
-		vec2* triUV = &(st->uv[i*3]);
+		vec2* triUV = &(st->uv[i * 3]);
 		_CRT_UNUSED(triUV);//test
 
 		const float lightMin = .7f;
@@ -969,4 +1026,24 @@ void pushStaticRenderStack(const StaticRenderStack* srs){
 
 void shadingScreen(Screen* sc){
 	_shadingScreen(sc);
+}
+
+// --- line --- /
+void drawLine3D(RenderContext* rCtx, vec3 p1, vec3 p2){
+	vec3 cp1 = toCameraPos(p1, rCtx->c);
+	vec3 cp2 = toCameraPos(p2, rCtx->c);
+	if(cp1.z < near && cp2.z < near){
+		return;
+	}
+	if(cp1.z < near){
+		vartex v = getNearIntersection(cp1, (vec2){ 0.f, 0.f }, cp2, (vec2){ 1.f, 1.f });
+		cp1 = v.v;
+	}
+	if(cp2.z < near){
+		vartex v = getNearIntersection(cp2, (vec2){ 0.f, 0.f }, cp1, (vec2){ 1.f, 1.f });
+		cp2 = v.v;
+	}
+	cPosToScPos(cp1, &cp1, rCtx->c->fov);
+	cPosToScPos(cp2, &cp2, rCtx->c->fov);
+	drawLine(rCtx->sc, cp1, cp2);
 }

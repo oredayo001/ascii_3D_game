@@ -1,8 +1,18 @@
+// --- obj --- /
 #include"../objManager.h"
+#include"chaser.h"
+
+// --- manager --- /
+//model
 #include"scene/commonManager/gameModelLoader.h"
-#include"player.h"
-#include"scene/commonManager/input.h"
+//map
 #include"scene/game/manager/map/mapManager.h"
+
+// --- obj --- /
+#include"player.h"
+
+#define POWDER_NUM __CHASER_POWDER_NUM__
+#define POWDER_STEP (256/__CHASER_POWDER_NUM__)
 
 #define baseCast(me) ((objBase*)(me))
 #define chaserCast(me) ((objChaser*)(me))
@@ -14,8 +24,22 @@
 //初期位置は大体この辺がよさそうかな/
 //(312.089,-500.000,-324.060)
 
+#define spd 7.f
 
-static void doNothing(objBase* base){ _CRT_UNUSED(base); }
+static void chaserStep(objBase* base){ 
+	SELF(me);
+	//プレイヤーを取得/
+	objBase* player = getInstPtr(&me->target);
+	if(player == NULL){
+		//無かったら探していったん終わる/
+		me->target = getNearestInst_id(base->render->p, obj_player);
+		return;
+	}
+	vec3 dir = v3normalize(v3sub(player->render->p, base->render->p));
+	base->v = v3mul(dir, spd);
+	base->render->p = v3add(base->render->p, base->v);
+	base->render->angle = createBasis(dir);
+}
 
 
 //##################################################################
@@ -42,12 +66,12 @@ static objIInterfaceVTable interfaceVTable = {
 // public:
 //##################################################################
 
-//objInitOut playerInitializer(objBase* me);//提案がうっとおしかったからここでプロトタイプ宣言/
 objInitOut chaserInitializer(objBase* base){
 	SELF(me);
-	_CRT_UNUSED(me);
 	base->v = (vec3){ 0 };
 	base->render->angle = basisZ;
 	base->render->scale = v3one;
-	return (objInitOut){ .step = doNothing, .model = getObjMdl(objModel_chaser), .interfaces = &interfaceVTable };
+	me->target = makeInstPtr(NULL);
+	getInstFromID(obj_player, &me->target, 1);//プレイヤーを取得/
+	return (objInitOut){ .step = chaserStep, .model = getObjMdl(objModel_chaser), .interfaces = &interfaceVTable };
 }

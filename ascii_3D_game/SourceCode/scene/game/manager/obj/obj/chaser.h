@@ -3,9 +3,12 @@
 #include"../objDef.h"
 #include"math/vec3.h"
 
-
+#define __CHASER_POWDER_NUM__ 32
 struct objChaser{
 	OBJ_BASE;
 	InstPtr target;
-	vec3 powders[32];//ルート検索のやつ/
+	uint8_t powderIndex_write;
+	uint8_t powderIndex_read;
+	//pad6
+	vec3 powders[__CHASER_POWDER_NUM__];//ルート検索のやつ 一旦ここに置く/
 };

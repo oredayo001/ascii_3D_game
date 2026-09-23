@@ -1,6 +1,8 @@
 #pragma once
 
-#define USE_THREAD 1
+#define USE_THREAD 0
+
+#if USE_THREAD
 
 #include "common.h"
 
@@ -16,3 +18,5 @@ void prepareThreads();
 void sleepThreads();
 //d–‚ª‘Sˆõ‚È‚¢ó‘Ô‚É‚È‚é‚Ü‚Å‘Ò‚Â/
 void wateForThreads();
+
+#endif

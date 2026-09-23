@@ -4,6 +4,9 @@
 #include "common.h"
 #include <float.h>
 
+#define _ENABLE_DEBUG_X 1
+#define _ENABLE_DEBUG (_ENABLE_DEBUG_X&&ENABLE_DEBUG)
+
 enum{
 	triType_floor,//床/
 	triType_wall,//壁/
@@ -288,16 +291,16 @@ static int _isPolygoneBetween(mapCollisionData* __restrict map, StaticRenderStac
 	vec3 rayV_m = v3sub(p1, p2);
 	//LOW gx gz の範囲外チェックやら/
 	int gx1 = getGrid(FtoINT(p1.x));
-	int gy1 = getGrid(FtoINT(p1.y));
+	int gz1 = getGrid(FtoINT(p1.z));
 	int gx2 = getGrid(FtoINT(p2.x));
-	int gy2 = getGrid(FtoINT(p2.y));
+	int gz2 = getGrid(FtoINT(p2.z));
 
 	int xMin = MIN(gx1, gx2); int xMax = MAX(gx1, gx2);
-	int yMin = MIN(gy1, gy2); int yMax = MAX(gy1, gy2);
+	int zMin = MIN(gz1, gz2); int zMax = MAX(gz1, gz2);
 	//TODO ddaアルゴリズム使う/
 	for(int gx = xMin; gx <= xMax; gx++){
-		for(int gy = yMin; gy <= yMax; gy++){
-			GridData* grid = &(map->gridData[getGridIndex(gx, gy, triType)]);
+		for(int gz = zMin; gz <= zMax; gz++){
+			GridData* grid = &(map->gridData[getGridIndex(gx, gz, triType)]);
 			float minDist = FLT_MAX;
 			struct Triangle* hitTri = NULL;
 			//グリッド内のポリゴンをループ/
@@ -461,4 +464,46 @@ void getNearestCeilingDist(vec3 p, vec3 v, float checkRange, fcResult* result){
 
 void getNearestWall(vec3 p, vec3 v, float r, float h, wallResult* result){
 	_getNearestWall(&(m.mapData), m.worldModel, p, v, r, h, result);
+}
+
+int isNoWall(vec3 p1, vec3 p2){
+	vec3 sub = v3sub(p2, p1);//reverse
+	int floorOrCeiling = sub.y < 0 ? triType_floor : triType_ceiling;//下やったら床/
+	if(100.f < fabsf(sub.y)){
+		//縦長なら床天井から見る/
+		if(_isPolygoneBetween(&(m.mapData), m.worldModel, p1, p2, floorOrCeiling))return 0;
+		if(_isPolygoneBetween(&(m.mapData), m.worldModel, p1, p2, triType_wall))return 0;
+	}
+	else{
+		//壁から見る/
+		if(_isPolygoneBetween(&(m.mapData), m.worldModel, p1, p2, triType_wall))return 0;
+		if(_isPolygoneBetween(&(m.mapData), m.worldModel, p1, p2, floorOrCeiling))return 0;
+	}
+	return 1;
+}
+
+
+
+// ---- DEBUG ---- /
+void _mapDebug_drawGrid(void* sc){
+	//float yMin = m.worldModel->bbox.min.y;
+	//float yMax = m.worldModel->bbox.max.y;
+	float yMin = -10000.f;
+	float yMax = 10000.f;
+	for(int gx = 0; gx <= M_GRID_NUM; gx++){
+		for(int gz = 0; gz <= M_GRID_NUM; gz++){
+			float x = (gx * M_GRID_SIZE) - POS_MAX;
+			float z = (gz * M_GRID_SIZE) - POS_MAX;
+			vec3 p1 = (vec3){ x, yMin, z };
+			vec3 p2 = (vec3){ x, yMax, z };
+			drawLine3D(sc, p1, p2);
+		}
+	}
+	for(int i = 0; i <= M_GRID_NUM; i++){
+		float coord = POS_MIN + (i * M_GRID_SIZE);
+		// x方向の格子線/
+		drawLine3D(sc, v3make(coord, 0.f, POS_MIN), v3make(coord, 0.f, POS_MAX));
+		// z方向の格子線/
+		drawLine3D(sc, v3make(POS_MIN, 0.f, coord), v3make(POS_MAX, 0.f, coord));
+	}
 }

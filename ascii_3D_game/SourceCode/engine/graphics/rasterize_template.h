@@ -150,8 +150,15 @@ static void FUNC_NAME(_rasterizeTri_halfSpace)(Screen* __restrict sc, vec3* __re
 			v_float v_u = simd_mul_ps(v_u_invz, v_z);
 			v_float v_v = simd_mul_ps(v_v_invz, v_z);
 
+#define set_x_indices_4(x) (x) + 3, (x) + 2, (x) + 1, (x)
+#define set_x_indices_8(x) (x) + 7, (x) + 6, (x) + 5, (x) + 4,(x) + 3, (x) + 2, (x) + 1, (x)
+#define set_x_indices(x) ATTACH(set_x_indices_,SIMD_STEP)(x)
+			//x/
+			v_float v_x_indices = simd_set_ps(set_x_indices((float)x));
+
+			//テクスチャ/
 			v_int v_ascii_old = simd_load_si((v_int*)scp);//アライメント済み/
-			v_int v_ascii_new = getAsciiShade_simd(v_u, v_v, v_invz_new, fCtx);
+			v_int v_ascii_new = getAsciiShade_simd(v_u, v_v, v_invz_new, v_x_indices, simd_set1_ps((float)y), fCtx);
 			v_int v_ascii_blended = simd_castps_si(simd_blendv_ps(simd_castsi_ps(v_ascii_old)/*false*/, simd_castsi_ps(v_ascii_new)/*true*/, v_mask));//混ぜる/
 
 			simd_store_si((v_int*)scp, v_ascii_blended);
@@ -328,11 +335,11 @@ static void FUNC_NAME(_fillHLineZ)(Screen* sc, int min, int max, vec2 uv1, vec2 
 	//v_float v_one = simd_set1_ps(1.f);
 	for(; x < max_simd; x += SIMD_STEP){
 		//ステップ数で分岐させるやつ その3/
-#define set_x_indices_4 x + 3, x + 2, x + 1, x
-#define set_x_indices_8 x + 7, x + 6, x + 5, x + 4,x + 3, x + 2, x + 1, x
-#define set_x_indices ATTACH(set_x_indices_,SIMD_STEP)
+#define set_x_indices_4(x) (x) + 3, (x) + 2, (x) + 1, (x)
+#define set_x_indices_8(x) (x) + 7, (x) + 6, (x) + 5, (x) + 4,(x) + 3, (x) + 2, (x) + 1, (x)
+#define set_x_indices(x) ATTACH(set_x_indices_,SIMD_STEP)(x)
 		//インデックスを超えてるかのマスク min<=x<=max/
-		v_int v_x_indices = simd_set_epi32(set_x_indices);
+		v_int v_x_indices = simd_set_epi32(set_x_indices(x));
 		v_int v_min = simd_set1_epi32(min);
 		v_int v_max = simd_set1_epi32(max - 1);//-1すると<=が<になる/
 
@@ -381,7 +388,10 @@ static void FUNC_NAME(_fillHLineZ)(Screen* sc, int min, int max, vec2 uv1, vec2 
 		_ASSERT(!(((size_t)scp) & (SIMD_ALIGN - 1)), "アライメント");
 		//テクスチャ/
 		v_int v_ascii_old = simd_load_si((v_int*)scp);//アライメントされてる/
-		v_int v_ascii_new = getAsciiShade_simd(v_u, v_v, v_invz, fCtx);//uv座標からテクスチャを読んでついでに影もつける/
+		//uv座標からテクスチャを読んでついでに影もつける/
+		v_float v_x_indices_f = simd_set_ps(set_x_indices((float)x));
+
+		v_int v_ascii_new = getAsciiShade_simd(v_u, v_v, v_invz, v_x_indices_f, simd_set1_ps(y), fCtx);
 		v_int v_ascii_32 = simd_castps_si(simd_blendv_ps(simd_castsi_ps(v_ascii_old)/*false*/, simd_castsi_ps(v_ascii_new)/*true*/, v_mask));//混ぜる/
 
 		simd_store_si((v_int*)scp, v_ascii_32);//書き込み/

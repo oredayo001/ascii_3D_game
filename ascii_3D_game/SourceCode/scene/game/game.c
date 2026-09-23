@@ -109,6 +109,7 @@ static void gameInit(ISystemContext* context){
 	m.rCtx->c->b = basisZ;
 
 	int stageModelMarker = gm_getMarker_back();
+	//loadStageModel(stageModel_stageDemo);
 	loadStageModel(stageModel_stage01);
 	//test
 	//Model3D* playerMdl = getObjMdl(objModel_player);
@@ -151,14 +152,17 @@ static void gameRender(){
 
 	// --- モデルをスタックに入れる --- /
 
-	//インスタンス描画/
+	//キャラ描画/
 	renderInstances();
+	//マップ描画/
+	renderMap();
 
 	// --- 描画 --- /
-	renderMap();
 	renderStackAll(m.rCtx);
 
-	if(m.toggleShading)shadingScreen(m.rCtx->sc);
+	//_mapDebug_drawGrid(m.rCtx);
+
+	//if(m.toggleShading)shadingScreen(m.rCtx->sc);
 }
 
 static void gameFin(){

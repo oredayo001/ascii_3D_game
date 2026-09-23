@@ -203,8 +203,16 @@ typedef __m256i v_int;
 #define simd_cmplt_epi32(a, b) _mm256_cmpgt_epi32((b), (a))
 //and
 #define simd_and_ps _mm256_and_ps
+//or
+#define simd_or_ps _mm256_or_ps
+//xor
+#define simd_xor_ps _mm256_xor_ps
 //and
 #define simd_and_si256 _mm256_and_si256/*!変更*/
+//or
+#define simd_or_si256 _mm256_or_si256/*!変更*/
+//xor
+#define simd_xor_si256 _mm256_xor_si256/*!変更*/
 //ps to signed int 128
 #define simd_castsi256_ps _mm256_castsi256_ps/*!変更*/
 //signed int 128 to ps 
@@ -240,6 +248,10 @@ typedef __m256i v_int;
 #define simd_setzero_si simd_setzero_si256
 //256bit全部のand
 #define simd_and_si simd_and_si256
+//or
+#define simd_or_si simd_or_si256
+//xor
+#define simd_xor_si simd_xor_si256
 //ps to si256 (再解釈するだけ)
 #define simd_castsi_ps simd_castsi256_ps
 //si256 to ps (再解釈するだけ)

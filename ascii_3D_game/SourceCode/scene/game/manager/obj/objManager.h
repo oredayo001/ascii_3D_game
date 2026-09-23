@@ -6,7 +6,7 @@
 // --- ŠÇ—Ò‚ªŒÄ‚Ô --- /
 
 //‰Šú‰»/
-void initInstances();
+//void initInstances();
 //XV/
 void updateInstances();
 //•`‰æ/
